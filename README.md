@@ -1,0 +1,30 @@
+# Automated Floodgate and Monitoring System (AFMS)
+
+This is the Flutter-based mobile and web application for the Automated Floodgate and Monitoring System.
+
+## Project Structure
+- `lib/`: Contains the Dart source code for the app.
+- `assets/`: Contains images and other assets.
+- `android/`, `ios/`, `web/`, `windows/`: Platform-specific configuration and code.
+
+## Getting Started
+
+### Prerequisites
+- Flutter SDK installed
+- Firebase CLI installed (if configuring Firebase)
+
+### Setup
+1. Clone the repository.
+2. Run `flutter pub get` to install dependencies.
+3. Configure Firebase (if not already done):
+   ```powershell
+   flutterfire configure --project=afwms-d3141
+   ```
+
+### Running the App
+- **Chrome (Web):** `flutter run -d chrome`
+- **Windows (Desktop):** `flutter run -d windows`
+
+## Firebase Features
+- Authentication (Email/Password)
+- Real-time Monitoring (Coming Soon)
