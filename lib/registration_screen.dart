@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'registration_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegistrationScreenState extends State<RegistrationScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
-      );
+  Future<void> _signUp() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      _showSnackBar('Please fill in all fields');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showSnackBar('Passwords do not match');
       return;
     }
 
@@ -27,29 +34,27 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-      // On success, navigate to dashboard (to be implemented)
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login successful!')),
-        );
+        _showSnackBar('Account created successfully!');
+        Navigator.pop(context); // Go back to login
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        String message = 'An error occurred';
-        if (e.code == 'user-not-found') {
-          message = 'No user found for that email.';
-        } else if (e.code == 'wrong-password') {
-          message = 'Wrong password provided.';
-        } else {
-          message = e.message ?? message;
+        String message = e.message ?? 'An error occurred';
+        if (e.code == 'weak-password') {
+          message = 'The password provided is too weak.';
+        } else if (e.code == 'email-already-in-use') {
+          message = 'The account already exists for that email.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        _showSnackBar(message);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Error: $e');
       }
     } finally {
       if (mounted) {
@@ -58,6 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -90,19 +101,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Image.asset(
                             'assets/logo.png',
-                            height: 150,
+                            height: 120, // Slightly smaller for extra fields
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Automated Floodgate & Waterlevel Monitoring System',
+                            'Create AFWMS Account',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 18,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
                           _buildTextField(
                             label: 'Email',
                             placeholder: 'Enter your email',
@@ -113,6 +124,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             label: 'Password',
                             placeholder: 'Enter your password',
                             controller: _passwordController,
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            label: 'Confirm Password',
+                            placeholder: 'Re-enter your password',
+                            controller: _confirmPasswordController,
                             isPassword: true,
                           ),
                           const SizedBox(height: 24),
@@ -128,13 +146,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 elevation: 0,
                               ),
-                              onPressed: _isLoading ? null : _login,
+                              onPressed: _isLoading ? null : _signUp,
                               child: _isLoading
                                   ? const CircularProgressIndicator(
                                       color: Colors.white,
                                     )
                                   : const Text(
-                                      'Login',
+                                      'Register',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -143,31 +161,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () {},
-                            child: const Text(
-                              'Forgot password?',
-                              style: TextStyle(
-                                color: Color(0xFF2A7AF0),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text("Don't have an account? "),
+                              const Text("Already have an account? "),
                               GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const RegistrationScreen(),
-                                    ),
-                                  );
-                                },
+                                onTap: () => Navigator.pop(context),
                                 child: const Text(
-                                  'Register now',
+                                  'Login',
                                   style: TextStyle(
                                     color: Color(0xFF2A7AF0),
                                     fontWeight: FontWeight.bold,
@@ -180,17 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'Emergency Hotline: 911 | Barangay Hotline: (02) 8646-1753',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
                 ),
               ),
             ),
