@@ -101,16 +101,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         children: [
                           Image.asset(
                             'assets/logo.png',
-                            height: 120, // Slightly smaller for extra fields
+                            height: 150,
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Create AFWMS Account',
+                            'Automated Floodgate & Waterlevel Monitoring System',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -181,6 +181,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                     ),
                   ),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Emergency Hotline: 911 | Barangay Hotline: (02) 8646-1753',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
                 ),
               ),
             ),
