@@ -16,10 +16,12 @@ This is the Flutter-based mobile and web application for the Automated Floodgate
 ### Setup
 1. Clone the repository.
 2. Run `flutter pub get` to install dependencies.
-3. Configure Firebase (if not already done):
+3. Configure Firebase (Mandatory for teammates):
+   Since sensitive Firebase configuration files are ignored by Git (see `.gitignore`), each team member must regenerate them locally:
    ```powershell
    flutterfire configure --project=afwms-d3141
    ```
+   *This will regenerate `lib/firebase_options.dart` and other platform-specific secrets.*
 
 ### Running the App
 - **Chrome (Web):** `flutter run -d chrome`
