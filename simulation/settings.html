@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFWMS Settings Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #2A7AF0;
+            --success-green: #4CAF50;
+            --warning-yellow: #FFC107;
+            --alarm-orange: #FF8A00;
+            --critical-red: #E53935;
+            --bg-light: #F8FAFC;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --card-white: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: #E2E8F0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 414px;
+            background: #F1F5F9;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+            border: 8px solid #1E293B;
+            display: flex;
+            flex-direction: column;
+            aspect-ratio: 9/19.5;
+        }
+
+        .notch {
+            height: 30px;
+            background: #1E293B;
+            width: 50%;
+            margin: 0 auto;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .content {
+            flex: 1;
+            padding: 50px 20px 20px;
+            overflow-y: auto;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* Profile Section */
+        .profile-card {
+            background: var(--card-white);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .profile-image {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #D1FAE5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #059669;
+            border: 2px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-info h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .profile-info p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Settings Group */
+        .settings-group {
+            margin-bottom: 24px;
+        }
+
+        .group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        .settings-card {
+            background: var(--card-white);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .settings-item {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #F1F5F9;
+            transition: background 0.2s;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .item-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            color: white;
+        }
+
+        .item-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #CBD5E1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--success-green);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Threshold Display */
+        .threshold-value {
+            font-weight: 700;
+            color: var(--primary-blue);
+            font-size: 14px;
+        }
+
+        /* Danger Action */
+        .btn-logout {
+            width: 100%;
+            padding: 16px;
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #FECACA;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-bottom: 20px;
+        }
+
+        .footer p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="phone-container">
+        <div class="notch"></div>
+
+        <div class="content">
+            <div class="header">
+                <h1>Settings</h1>
+            </div>
+
+            <div class="profile-card">
+                <div class="profile-image">👤</div>
+                <div class="profile-info">
+                    <h3>Juan Dela Cruz</h3>
+                    <p>juan.dc@example.com</p>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="group-title">General</div>
+                <div class="settings-card">
+                    <div class="settings-item" style="cursor: pointer;">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #E8F5E9; color: #2E7D32;">📍</div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="item-label" style="color: #0369A1; font-weight: 600;">Location</span>
+                                <span style="font-size: 13px; color: #64748B;">Marikina Riverbanks, Marikina City</span>
+                            </div>
+                        </div>
+                        <div style="color: #94A3B8; font-size: 18px;">&rsaquo;</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="group-title">System Configuration</div>
+                <div class="settings-card">
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #2A7AF0;">🛡</div>
+                            <span class="item-label">Automated Gate Control</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #F59E0B;">⚠️</div>
+                            <span class="item-label">Critical Threshold</span>
+                        </div>
+                        <span class="threshold-value">18.0m</span>
+                    </div>
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #10B981;">📊</div>
+                            <span class="item-label">Data Logging</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="group-title">Notifications</div>
+                <div class="settings-card">
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #6366F1;">📱</div>
+                            <span class="item-label">Push Notifications</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #EC4899;">✉️</div>
+                            <span class="item-label">Email Alerts</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="item-info">
+                            <div class="item-icon" style="background: #14B8A6;">💬</div>
+                            <span class="item-label">SMS Alerts</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="group-title">Account</div>
+                <button class="btn-logout">Log Out</button>
+            </div>
+
+            <div class="footer">
+                <p>AFWMS Alpha v1.0.4</p>
+                <p>&copy; 2026 AFWMS Project Team</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFWMS Alpha Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #2A7AF0;
+            --success-green: #4CAF50;
+            --warning-yellow: #FFC107;
+            --alarm-orange: #FF8A00;
+            --critical-red: #E53935;
+            --bg-light: #F8FAFC;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: #E2E8F0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 414px;
+            /* iPhone 11 Pro Max width roughly */
+            background: #F1F5F9;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+            border: 8px solid #1E293B;
+            display: flex;
+            flex-direction: column;
+            aspect-ratio: 9/19.5;
+        }
+
+        /* Status Bar / Notch */
+        .notch {
+            height: 30px;
+            background: #1E293B;
+            width: 50%;
+            margin: 0 auto;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .content {
+            flex: 1;
+            padding: 40px 20px 20px;
+            overflow-y: auto;
+            padding-top: 50px;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Status Card */
+        .status-card {
+            background: #FFF9C4;
+            /* Yellow for Medium Risk */
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .status-card.safe {
+            background: #E8F5E9;
+        }
+
+        .status-card.warning {
+            background: #FFF9C4;
+        }
+
+        .status-card.alarm {
+            background: #FFE0B2;
+        }
+
+        .status-card.critical {
+            background: #FFEBEE;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-icon-bg {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #FBC02D;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .safe .status-icon-bg {
+            background: #4CAF50;
+        }
+
+        .warning .status-icon-bg {
+            background: #FBC02D;
+        }
+
+        .alarm .status-icon-bg {
+            background: #F57C00;
+        }
+
+        .critical .status-icon-bg {
+            background: #D32F2F;
+        }
+
+        .status-text-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .status-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #AF8500;
+            /* Variant based on severity */
+        }
+
+        .safe .status-value {
+            color: #2E7D32;
+        }
+
+        .warning .status-value {
+            color: #AF8500;
+        }
+
+        .alarm .status-value {
+            color: #E65100;
+        }
+
+        .critical .status-value {
+            color: #C62828;
+        }
+
+        .status-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Generic Card Style */
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Water Level Monitor Card */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2A7AF0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .level-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-left: 52px;
+            margin-bottom: 24px;
+        }
+
+        /* Multi-colored Gauge */
+        .gauge-section {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .vertical-gauge {
+            width: 80px;
+            height: 180px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #e0e0e0;
+        }
+
+        .gauge-segment {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        .segment-critical {
+            height: 25%;
+            background: #FF8A80;
+        }
+
+        .segment-alarm-2 {
+            height: 25%;
+            background: #FFD180;
+        }
+
+        .segment-alarm-1 {
+            height: 10%;
+            background: #FFE57F;
+        }
+
+        .segment-normal {
+            height: 40%;
+            background: #C8E6C9;
+        }
+
+        .water-fill-visual {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20%;
+            background: rgba(42, 122, 240, 0.6);
+            border-top: 3px solid var(--primary-blue);
+            transition: height 0.3s ease;
+            z-index: 5;
+        }
+
+        .legend-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .color-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        /* Floodgate Control Card */
+        .floodgate-card {
+            background: #FFF7EE;
+            border-radius: 24px;
+            padding: 24px;
+        }
+
+        .fg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .fg-title-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fg-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #FF6D00;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .fg-status-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .fg-status-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #E65100;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #CBD5E1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--success-green);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(24px);
+        }
+
+        .gate-visual-container {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .gate-img-placeholder {
+            width: 100%;
+            height: 120px;
+            background: #E0F2FE;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 4px solid #475569;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gate-door {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #7DD3FC;
+            transition: transform 0.6s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #0369A1;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1px solid #0EA5E9;
+        }
+
+        .gate-door.open {
+            transform: translateY(-100%);
+        }
+
+        .fg-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .fg-position {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #FF6D00;
+        }
+
+        /* Simulation Slider at bottom */
+        .sim-control {
+            background: #1E293B;
+            padding: 20px;
+            color: white;
+        }
+
+        .sim-control label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: #94A3B8;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .footer-action {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="phone-container">
+        <div class="notch"></div>
+
+        <div class="content">
+            <div class="header">
+                <h1>Dashboard</h1>
+                <p>Real-time monitoring system</p>
+            </div>
+
+            <div id="status-card" class="status-card warning">
+                <div class="status-header">
+                    <div class="status-icon-bg">
+                        <span id="status-icon">⚠</span>
+                    </div>
+                    <div class="status-text-content">
+                        <span class="status-label">Current Status</span>
+                        <span id="status-value" class="status-value">Medium Risk</span>
+                    </div>
+                </div>
+                <p id="status-desc" class="status-desc">
+                    Water levels are elevated. Stay alert and monitor updates.
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💧</div>
+                    <span class="card-title">Water Level Monitor</span>
+                </div>
+                <div id="level-num" class="level-value">15.2m</div>
+
+                <div class="gauge-section">
+                    <div class="vertical-gauge">
+                        <div class="gauge-segment segment-critical">CRITICAL</div>
+                        <div class="gauge-segment segment-alarm-2">2ND</div>
+                        <div class="gauge-segment segment-alarm-1">1ST</div>
+                        <div class="gauge-segment segment-normal"></div>
+                        <div id="gauge-fill" class="water-fill-visual"></div>
+                    </div>
+
+                    <div class="legend-vertical">
+                        <div class="legend-item">
+                            <div class="color-box" style="background: #E53935;"></div>
+                            <span>Critical (18m+)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="color-box" style="background: #FF8A00;"></div>
+                            <span>2nd Alarm (16-18m)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="color-box" style="background: #FFC107;"></div>
+                            <span>1st Alarm (15-16m)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="color-box" style="background: #4CAF50;"></div>
+                            <span>Normal (&lt;15m)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="floodgate-card">
+                <div class="fg-header">
+                    <div class="fg-title-info">
+                        <div class="fg-icon">🛡</div>
+                        <div class="fg-status">
+                            <span class="fg-status-label">Floodgate Control</span>
+                            <div id="gate-status-text" class="fg-status-value">Open</div>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="gate-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="gate-visual-container">
+                    <div class="gate-img-placeholder">
+                        <div id="gate-door" class="gate-door open">OPEN FLOW</div>
+                    </div>
+                    <div class="fg-footer">
+                        <div class="fg-position">
+                            <span class="dot-status"></span>
+                            <span id="gate-pos-text">Gate Position: OPEN (100%)</span>
+                        </div>
+                        <div class="fg-notif">🔔</div>
+                    </div>
+                </div>
+
+                <p class="status-desc" style="text-align: center;">
+                    Your home floodgate is open. Close it when flood risk increases.
+                </p>
+            </div>
+
+            <div class="footer-action">
+                <span style="color: #64748B;">Last Action:</span>
+                <span id="last-action" style="font-weight: 500;">Opened 2 hours ago</span>
+            </div>
+        </div>
+
+        <!-- Simulator Control Panel -->
+        <div class="sim-control">
+            <label>Simulation: Adjust Water Level</label>
+            <input type="range" id="level-slider" min="0" max="20" step="0.1" value="15.2">
+            <div
+                style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; color: #94A3B8;">
+                <span>0m</span>
+                <span>15m</span>
+                <span>18m</span>
+                <span>20m</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById('level-slider');
+        const levelNum = document.getElementById('level-num');
+        const gaugeFill = document.getElementById('gauge-fill');
+        const statusCard = document.getElementById('status-card');
+        const statusValue = document.getElementById('status-value');
+        const statusDesc = document.getElementById('status-desc');
+        const statusIcon = document.getElementById('status-icon');
+
+        const gateToggle = document.getElementById('gate-toggle');
+        const gateStatusText = document.getElementById('gate-status-text');
+        const gateDoor = document.getElementById('gate-door');
+        const gatePosText = document.getElementById('gate-pos-text');
+        const lastAction = document.getElementById('last-action');
+
+        let isGateOpen = true;
+
+        slider.addEventListener('input', (e) => {
+            const level = parseFloat(e.target.value);
+            updateUI(level);
+        });
+
+        gateToggle.addEventListener('change', (e) => {
+            isGateOpen = e.target.checked;
+            updateGateUI();
+            const now = new Date();
+            lastAction.innerText = `Just now`;
+        });
+
+        function updateUI(level) {
+            levelNum.innerText = `${level.toFixed(1)}m`;
+
+            // Gauge height
+            const heightPercent = (level / 20) * 100;
+            gaugeFill.style.height = `${heightPercent}%`;
+
+            // Logic check
+            statusCard.classList.remove('safe', 'warning', 'alarm', 'critical');
+
+            if (level < 15) {
+                statusCard.classList.add('safe');
+                statusValue.innerText = "Safe";
+                statusIcon.innerText = "✓";
+                statusDesc.innerText = "Water levels are normal. No immediate action required.";
+            } else if (level < 16) {
+                statusCard.classList.add('warning');
+                statusValue.innerText = "Medium Risk";
+                statusIcon.innerText = "⚠";
+                statusDesc.innerText = "Water levels are elevated. Stay alert and monitor updates.";
+            } else if (level < 18) {
+                statusCard.classList.add('alarm');
+                statusValue.innerText = "High Risk";
+                statusIcon.innerText = "‼";
+                statusDesc.innerText = "High water levels detected. Prepare for possible gate closure.";
+            } else {
+                statusCard.classList.add('critical');
+                statusValue.innerText = "Critical";
+                statusIcon.innerText = "🚨";
+                statusDesc.innerText = "CRITICAL LEVEL! Emergency protocols active. Automated gate closure triggered.";
+
+                // Auto close logic
+                if (isGateOpen) {
+                    isGateOpen = false;
+                    gateToggle.checked = false;
+                    updateGateUI();
+                    alert("CRITICAL LEVEL REACHED: Closing floodgate automatically!");
+                }
+            }
+        }
+
+        function updateGateUI() {
+            if (isGateOpen) {
+                gateStatusText.innerText = "Open";
+                gateStatusText.style.color = "#E65100";
+                gateDoor.classList.add('open');
+                gatePosText.innerText = "Gate Position: OPEN (100%)";
+            } else {
+                gateStatusText.innerText = "Closed";
+                gateStatusText.style.color = "#C62828";
+                gateDoor.classList.remove('open');
+                gatePosText.innerText = "Gate Position: CLOSED (0%)";
+            }
+        }
+
+        // Initial state
+        updateUI(15.2);
+    </script>
+
+</body>
+
+</html>
