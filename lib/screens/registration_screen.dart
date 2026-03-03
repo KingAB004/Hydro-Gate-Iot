@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
+import '../services/auth_service.dart';
+import 'main_home_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -14,6 +16,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final credential = await AuthService().signInWithGoogle();
+      if (credential != null && mounted) {
+        _showSnackBar('Account created successfully!');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainHomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Failed to sign in with Google: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   Future<void> _signUp() async {
     final email = _emailController.text.trim();
@@ -169,7 +197,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
