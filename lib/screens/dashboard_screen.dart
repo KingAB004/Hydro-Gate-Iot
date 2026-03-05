@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/alerts_dropdown.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -10,23 +11,68 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool isGateOpen = true;
 
+  
+  static const Color deepSpaceBlue = Color(0xFF003249);
+  static const Color cerulean = Color(0xFF007EA7);
+  static const Color frostedBlueMedium = Color(0xFF80CED7);
+  static const Color frostedBlueLight = Color(0xFF9AD1D4);
+  static const Color ambientGrey = Color(0xFFCCDBDC);
+
+  void _showNotificationsDropdown() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.2),
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: 60,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: const AlertsDropdown(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF9EE), // Very light yellow/orange tint
+      backgroundColor: ambientGrey,
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20)),
+        backgroundColor: Color(0xFF007EA7),
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: _showNotificationsDropdown,
+          ),
+        ],
       ),
+      drawer: _buildDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             _buildWaterLevelMonitor(),
             const SizedBox(height: 16),
-            _buildFloodgateControl(),
+            Row(
+              children: [
+                Expanded(child: _buildFloodgateControl()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildRainfallCard()),
+              ],
+            ),
           ],
         ),
       ),
@@ -38,72 +84,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Water Level',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '16m',
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w600,
+              color: deepSpaceBlue,
+            ),
+          ),
+          const SizedBox(height: 24),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2A7AF0), // Blue circle
+              const SizedBox(width: 20),
+              _buildGauge(),
+              const SizedBox(width: 32),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLegendItem(const Color(0xFFD32F2F), 'Critical', '18m+'),
+                    const SizedBox(height: 12),
+                    _buildLegendItem(const Color(0xFFF57C00), '2nd Alarm', '16-18m'),
+                    const SizedBox(height: 12),
+                    _buildLegendItem(frostedBlueLight, '1st Alarm', '15-16m'),
+                    const SizedBox(height: 12),
+                    _buildLegendItem(cerulean, 'Normal', '<15m'),
+                  ],
                 ),
-                child: const Icon(Icons.water_drop_outlined, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 16),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Water Level Monitor',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  Text(
-                    '15.2m',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Gauge
-              _buildGauge(),
-              const SizedBox(width: 32),
-              // Legend
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLegendItem(const Color(0xFFE53935), 'Critical', '18m+ (3rd)'),
-                  const SizedBox(height: 16),
-                  _buildLegendItem(const Color(0xFFFF8A00), '2nd Alarm', '16-18m'),
-                  const SizedBox(height: 16),
-                  _buildLegendItem(const Color(0xFFFFC107), '1st Alarm', '15-16m'),
-                  const SizedBox(height: 16),
-                  _buildLegendItem(const Color(0xFF4CAF50), 'Normal', '<15m'),
-                ],
-              ),
-            ],
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF9C4),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFF57C00), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Second alarm threshold reached',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -111,139 +159,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildGauge() {
-    return Stack(
-      children: [
-        // Base structure
-        Container(
-          width: 100,
-          height: 300,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.transparent),
-          ),
-          child: Column(
+    return Container(
+      width: 60,
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        color: Colors.grey.shade200,
+      ),
+      child: Stack(
+        children: [
+          // Background sections (for visual reference)
+          Column(
             children: [
-              // Critical Section
-              Expanded(
-                flex: 4, // Represents size based on scale
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF44336), // Red
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  width: double.infinity,
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.all(8),
-                  child: const Text('CRITICAL', style: TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              // 2nd Alarm Section
-              Expanded(
-                flex: 4,
-                child: Container(
-                  color: const Color(0xFFFF8F00), // Orange
-                  width: double.infinity,
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.all(8),
-                  child: const Text('2ND', style: TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              // 1st Alarm Section
               Expanded(
                 flex: 3,
                 child: Container(
-                  color: const Color(0xFFFFC107), // Yellow
-                  width: double.infinity,
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.all(8),
-                  child: const Text('1ST', style: TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold)),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD32F2F),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                  ),
                 ),
               ),
-              // Normal Section placeholder
               Expanded(
-                flex: 5,
+                flex: 2,
+                child: Container(color: const Color(0xFFF57C00)),
+              ),
+              Expanded(
+                flex: 1,
+                child: Container(color: frostedBlueLight),
+              ),
+              Expanded(
+                flex: 4,
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE3F2FD),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
                   ),
                 ),
               ),
             ],
           ),
-        ),
-        // Actual Water Fill Layer (Overlaying everything)
-        // Positioned at the bottom, growing upwards
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 140, // Currently filling up to normal/1st alarm level
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF64B5F6), Color(0xFF1976D2)],
+          // Current water level overlay
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 120, // Adjust based on current level (16m = 2nd alarm)
+            child: Container(
+              decoration: BoxDecoration(
+                color: cerulean,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
               ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)), // Curve bottom
-            ),
-            child: Stack(
-              children: [
-                // Highlight at top of water
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 15,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                  ),
-                ),
-                // Tiny overlapping indicators (arrows)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: Icon(Icons.arrow_left, color: Colors.blue[800], size: 20),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Icon(Icons.arrow_right, color: Colors.blue[800], size: 20),
-                ),
-                // Bubbles (optional simple circles)
-                Positioned(top: 20, left: 20, child: _bubble()),
-                Positioned(top: 60, right: 20, child: _bubble()),
-                Positioned(bottom: 30, left: 30, child: _bubble()),
-              ],
             ),
           ),
-        ),
-        // Base plate
-        Positioned(
-          bottom: -5,
-          left: -10,
-          right: -10,
-          child: Container(
-            height: 12,
-            decoration: BoxDecoration(
-              color: const Color(0xFF455A64), // Dark grey base
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _bubble() {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
-        shape: BoxShape.circle,
+        ],
       ),
     );
   }
@@ -252,26 +221,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       children: [
         Container(
-          width: 16,
-          height: 16,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(4),
+            shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            Text(
-              range,
-              style: const TextStyle(color: Colors.black54, fontSize: 12),
-            ),
-          ],
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: deepSpaceBlue,
+                ),
+              ),
+              Text(
+                range,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -279,202 +257,248 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildFloodgateControl() {
     return Container(
+      height: 206, // Match rainfall card height
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                isGateOpen = !isGateOpen;
+              });
+            },
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isGateOpen ? cerulean : const Color.fromARGB(255, 255, 82, 82),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF6D00), // Orange circle
-                    ),
-                    child: const Icon(Icons.shield_outlined, color: Colors.white, size: 28),
+                  Icon(
+                    isGateOpen ? Icons.lock_open_rounded : Icons.lock_rounded,
+                    color: Colors.white,
+                    size: 32,
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Floodgate Control',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      Text(
-                        isGateOpen ? 'Open' : 'Closed',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isGateOpen ? const Color(0xFFD84315) : const Color(0xFF4CAF50),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 4),
+                  Text(
+                    isGateOpen ? 'OPEN' : 'CLOSED',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ],
               ),
-              Switch(
-                value: isGateOpen,
-                activeColor: const Color(0xFF2A7AF0),
-                inactiveTrackColor: Colors.grey[300],
-                onChanged: (value) {
-                  setState(() {
-                    isGateOpen = value;
-                  });
-                },
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 24),
-          // Flow visualization
+          const SizedBox(height: 12),
+          Text(
+            isGateOpen ? 'FLOW ACTIVE' : 'FLOW BLOCKED',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isGateOpen ? const Color(0xFF007EA7) : const Color.fromARGB(255, 255, 82, 82),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Floodgate',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRainfallCard() {
+    return Container(
+      height: 206, // Match floodgate card height
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: deepSpaceBlue,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.water_drop,
+            color: Colors.white70,
+            size: 24,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Rainfall',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '12',
+            style: TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+          const Text(
+            'mm/hr',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Moderate Rain',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          // Header
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF007EA7),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // The blue stream representation
                 Container(
-                  height: 150,
-                  width: double.infinity,
+                  width: 70,
+                  height: 70,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFF90CAF9), Color(0xFF42A5F5)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
+                    color: ambientGrey,
+                    border: Border.all(color: Colors.white, width: 3),
                   ),
-                  child: Stack(
-                    children: [
-                      // Dark grey gate columns
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 20,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF37474F),
-                            borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 20,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF37474F),
-                            borderRadius: BorderRadius.horizontal(right: Radius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      // If gate is closed
-                      if (!isGateOpen)
-                        Positioned(
-                          top: 0,
-                          left: 20,
-                          right: 20,
-                          bottom: 0,
-                          child: Container(
-                            color: const Color(0xFF607D8B),
-                            child: const Center(
-                              child: Text(
-                                'CLOSED',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Button overlaid on stream
-                      Positioned(
-                        bottom: 16,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: isGateOpen ? const Color(0xFF1976D2) : const Color(0xFFD84315),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                isGateOpen = !isGateOpen;
-                              });
-                            },
-                            child: Text(isGateOpen ? 'OPEN FLOW' : 'CLOSE FLOW', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: const Icon(
+                    Icons.person,
+                    size: 40,
+                    color: deepSpaceBlue,
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Gate position text
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF6D00),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          isGateOpen ? 'Gate Position: OPEN (100%)' : 'Gate Position: CLOSED (0%)',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                    const Icon(Icons.notifications_none_outlined, color: Color(0xFFFF6D00), size: 20),
-                  ],
+                const Text(
+                  'John Doe',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'john.doe@example.com',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Your home floodgate is open. Close it when flood risk increases.',
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: 14,
+          // Menu Items
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildDrawerItem(
+                  icon: Icons.person_outline,
+                  title: 'Profile',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to profile screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile screen coming soon')),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to settings screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Settings screen coming soon')),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                _buildDrawerItem(
+                  icon: Icons.logout,
+                  title: 'Logout',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Handle logout
+                    Navigator.pop(context); // Go back to login
+                  },
+                  iconColor: Colors.red,
+                  textColor: Colors.red,
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? iconColor,
+    Color? textColor,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: iconColor ?? deepSpaceBlue,
+        size: 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: textColor ?? const Color(0xFF1E293B),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
