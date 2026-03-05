@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LGU Dashboard - AFWMS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 240px;
+            background: white;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid #e8ecf1;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c80ff;
+        }
+
+        .sidebar-brand-icon {
+            width: 32px;
+            height: 32px;
+            background: #2c80ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            margin: 4px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .nav-item.active {
+            background: #2c80ff;
+            color: white;
+        }
+
+        .nav-item-icon {
+            font-size: 18px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 240px;
+            flex: 1;
+            padding: 32px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: #6366f1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-info-text {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        /* Stats Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-content {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon-blue {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .stat-icon-green {
+            background: #d1fae5;
+            color: #10b981;
+        }
+
+        .stat-icon-red {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .stat-icon-purple {
+            background: #e0e7ff;
+            color: #6366f1;
+        }
+
+        .stat-icon-purple {
+            background: #e0e7ff;
+            color: #6366f1;
+        }
+
+        /* Content Card */
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e8ecf1;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Page Views */
+        .page-view {
+            display: none;
+        }
+
+        .page-view.active {
+            display: block;
+        }
+
+        /* Water Level Monitor Styles */
+        .water-gauge-container {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .water-gauge {
+            position: relative;
+            width: 180px;
+            height: 280px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid #e5e7eb;
+        }
+
+        .water-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            transition: height 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 24px;
+        }
+
+        .gauge-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+            pointer-events: none;
+        }
+
+        .gauge-marker {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .water-info {
+            flex: 1;
+        }
+
+        .water-level-display {
+            margin-bottom: 32px;
+        }
+
+        .water-level-value {
+            font-size: 56px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .water-level-label {
+            color: #9ca3af;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .water-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .water-stat-item {
+            text-align: center;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .water-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .water-stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Flood Gate Control Styles */
+        .gate-control-section {
+            max-width: 600px;
+        }
+
+        .gate-status-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .gate-status-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 15px;
+        }
+
+        .gate-status-badge {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .gate-open {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .gate-closed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+
+        .gate-info-box {
+            margin-top: 24px;
+            padding: 16px;
+            background: #fef3c7;
+            border-radius: 10px;
+            border-left: 4px solid #f59e0b;
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.6;
+        }
+
+        .gate-stats-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        /* Announcement Styles */
+        .announcement-form {
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: white;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .announcement-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .announcement-item {
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #6366f1;
+        }
+
+        .announcement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .announcement-type {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .type-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .type-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .type-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .announcement-time {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .announcement-message {
+            color: #4b5563;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .alert-banner.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-banner-content {
+            color: #991b1b;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .main-content {
+                margin-left: 200px;
+                padding: 20px;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+
+            .water-gauge-container {
+                flex-direction: column;
+            }
+
+            .water-gauge {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🏛️</div>
+                <span>Aqua Gate</span>
+            </div>
+        </div>
+        
+        <div class="sidebar-nav">
+            <div class="nav-item active" onclick="showPage('overview')">
+                <span class="nav-icon">📊</span>
+                <span>Overview</span>
+            </div>
+            <div class="nav-item" onclick="showPage('water-monitor')">
+                <span class="nav-icon">💧</span>
+                <span>Water Level Monitor</span>
+            </div>
+            <div class="nav-item" onclick="showPage('flood-gate')">
+                <span class="nav-icon">🚧</span>
+                <span>Flood Gate Control</span>
+            </div>
+            <div class="nav-item" onclick="showPage('announcement')">
+                <span class="nav-icon">📢</span>
+                <span>Announcements</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner">
+            <span>⚠️</span>
+            <div class="alert-banner-content">
+                <span id="alertMessage">Critical water level reached!</span>
+            </div>
+        </div>
+
+        <!-- Overview Page -->
+        <div id="overview" class="page-view active">
+            <div class="header">
+                <h1>Overview</h1>
+                <div class="header-right">
+                    <div class="user-badge">
+                        <div class="user-avatar">L</div>
+                        <span class="user-info-text">LGU Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <div class="stat-label">Current Water Level</div>
+                        <div class="stat-value"><span id="overviewWaterLevel">4.5</span>m</div>
+                    </div>
+                    <div class="stat-icon-wrapper stat-icon-blue">
+                        <span>💧</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <div class="stat-label">Flood Gate Status</div>
+                        <div class="stat-value" id="overviewGateStatus">OPEN</div>
+                    </div>
+                    <div class="stat-icon-wrapper stat-icon-green">
+                        <span>🚧</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <div class="stat-label">Announcements Today</div>
+                        <div class="stat-value" id="announcementCount">2</div>
+                    </div>
+                    <div class="stat-icon-wrapper stat-icon-purple">
+                        <span>📢</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">System Status</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">Min Level Today</div>
+                                <div class="stat-value" style="font-size: 24px;"><span id="overviewMinLevel">2.1</span>m</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">Max Level Today</div>
+                                <div class="stat-value" style="font-size: 24px;"><span id="overviewMaxLevel">6.2</span>m</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">Gate Operations</div>
+                                <div class="stat-value" style="font-size: 24px;"><span id="overviewOperations">3</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Water Level Monitor Page -->
+        <div id="water-monitor" class="page-view">
+            <div class="header">
+                <h1>Water Level Monitor</h1>
+                <div class="header-right">
+                    <div class="user-badge">
+                        <div class="user-avatar">L</div>
+                        <span class="user-info-text">LGU Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">Real-Time Water Level</div>
+                </div>
+                <div class="card-body">
+                    <div class="water-gauge-container">
+                        <div class="water-gauge">
+                            <div class="gauge-markers">
+                                <div class="gauge-marker"><span>10m</span><span>Critical</span></div>
+                                <div class="gauge-marker"><span>7.5m</span><span>High</span></div>
+                                <div class="gauge-marker"><span>5m</span><span>Normal</span></div>
+                                <div class="gauge-marker"><span>2.5m</span><span>Low</span></div>
+                                <div class="gauge-marker"><span>0m</span><span>Empty</span></div>
+                            </div>
+                            <div class="water-fill" id="waterFill" style="height: 45%;"></div>
+                        </div>
+
+                        <div class="water-info">
+                            <div class="water-level-display">
+                                <div class="water-level-value" id="waterLevelValue">4.5m</div>
+                                <div class="water-level-label">Current Level</div>
+                            </div>
+
+                            <div class="water-stats-grid">
+                                <div class="water-stat-item">
+                                    <div class="water-stat-value" id="minLevel">2.1m</div>
+                                    <div class="water-stat-label">Min Today</div>
+                                </div>
+                                <div class="water-stat-item">
+                                    <div class="water-stat-value" id="maxLevel">6.2m</div>
+                                    <div class="water-stat-label">Max Today</div>
+                                </div>
+                                <div class="water-stat-item">
+                                    <div class="water-stat-value" id="avgLevel">4.3m</div>
+                                    <div class="water-stat-label">Average</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flood Gate Control Page -->
+        <div id="flood-gate" class="page-view">
+            <div class="header">
+                <h1>Flood Gate Control</h1>
+                <div class="header-right">
+                    <div class="user-badge">
+                        <div class="user-avatar">L</div>
+                        <span class="user-info-text">LGU Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">Gate Operations</div>
+                </div>
+                <div class="card-body">
+                    <div class="gate-control-section">
+                        <div class="gate-status-display">
+                            <span class="gate-status-label">Current Gate Status:</span>
+                            <span class="gate-status-badge gate-open" id="gateStatus">OPEN</span>
+                        </div>
+
+                        <button class="btn btn-danger" id="closeGateBtn" onclick="closeGate()">
+                            🔒 Close Flood Gate
+                        </button>
+                        <button class="btn btn-success" id="openGateBtn" onclick="openGate()" style="display: none; margin-top: 12px;">
+                            🔓 Open Flood Gate
+                        </button>
+
+                        <div class="gate-stats-row">
+                            <div class="water-stat-item">
+                                <div class="water-stat-value" id="gateOpenTime">142 min</div>
+                                <div class="water-stat-label">Gate Open Time</div>
+                            </div>
+                            <div class="water-stat-item">
+                                <div class="water-stat-value" id="operationCount">3</div>
+                                <div class="water-stat-label">Operations Today</div>
+                            </div>
+                        </div>
+
+                        <div class="gate-info-box">
+                            <strong>⚠️ Important:</strong> Gate operation affects downstream water flow. Please monitor water levels carefully before and after gate operations. Ensure proper authorization before making changes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Announcement Page -->
+        <div id="announcement" class="page-view">
+            <div class="header">
+                <h1>Announcements</h1>
+                <div class="header-right">
+                    <div class="user-badge">
+                        <div class="user-avatar">L</div>
+                        <span class="user-info-text">LGU Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">Send New Announcement</div>
+                </div>
+                <div class="card-body">
+                    <div class="announcement-form">
+                        <div class="form-group">
+                            <label class="form-label">Announcement Type</label>
+                            <select class="form-select" id="announcementType">
+                                <option value="info">Information</option>
+                                <option value="warning">Warning</option>
+                                <option value="danger">Emergency Alert</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea class="form-textarea" id="announcementMessage" placeholder="Enter your announcement message here..."></textarea>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="sendAnnouncement()">
+                            📤 Send Announcement
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <div class="card-title">Recent Announcements</div>
+                </div>
+                <div class="card-body">
+                    <div class="announcement-list" id="announcementList">
+                        <div class="announcement-item">
+                            <div class="announcement-header">
+                                <span class="announcement-type type-info">INFO</span>
+                                <span class="announcement-time">2 hours ago</span>
+                            </div>
+                            <div class="announcement-message">
+                                Water levels are within normal range. No action required at this time.
+                            </div>
+                        </div>
+                        <div class="announcement-item">
+                            <div class="announcement-header">
+                                <span class="announcement-type type-warning">WARNING</span>
+                                <span class="announcement-time">5 hours ago</span>
+                            </div>
+                            <div class="announcement-message">
+                                Heavy rainfall expected in the next 24 hours. Monitoring water levels closely.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Page Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-view').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Add active class to clicked nav item
+            event.target.closest('.nav-item').classList.add('active');
+        }
+
+        // Simulate water level changes
+        function updateWaterLevel() {
+            const level = (Math.random() * 3 + 3.5).toFixed(1); // Random between 3.5 and 6.5
+            const percentage = (level / 10) * 100;
+            
+            // Update all water level displays
+            document.getElementById('waterLevelValue').textContent = level + 'm';
+            document.getElementById('overviewWaterLevel').textContent = level;
+            document.getElementById('waterFill').style.height = percentage + '%';
+
+            // Show alert if critical
+            if (level > 7) {
+                document.getElementById('alertBanner').classList.add('show');
+                document.getElementById('alertMessage').textContent = 'Critical water level reached: ' + level + 'm';
+            } else {
+                document.getElementById('alertBanner').classList.remove('show');
+            }
+        }
+
+        // Update water level every 5 seconds
+        setInterval(updateWaterLevel, 5000);
+
+        // Gate control functions
+        let gateOpen = true;
+        let operationCount = 3;
+        let announcementCountValue = 2;
+
+        function closeGate() {
+            if (confirm('Are you sure you want to close the flood gate?')) {
+                gateOpen = false;
+                operationCount++;
+                
+                // Update all gate status displays
+                document.getElementById('gateStatus').textContent = 'CLOSED';
+                document.getElementById('gateStatus').className = 'gate-status-badge gate-closed';
+                document.getElementById('overviewGateStatus').textContent = 'CLOSED';
+                
+                document.getElementById('closeGateBtn').style.display = 'none';
+                document.getElementById('openGateBtn').style.display = 'block';
+                
+                document.getElementById('operationCount').textContent = operationCount;
+                document.getElementById('overviewOperations').textContent = operationCount;
+                
+                // Send automatic announcement
+                addAnnouncement('warning', 'Flood gate has been CLOSED by LGU operator.');
+            }
+        }
+
+        function openGate() {
+            if (confirm('Are you sure you want to open the flood gate?')) {
+                gateOpen = true;
+                operationCount++;
+                
+                // Update all gate status displays
+                document.getElementById('gateStatus').textContent = 'OPEN';
+                document.getElementById('gateStatus').className = 'gate-status-badge gate-open';
+                document.getElementById('overviewGateStatus').textContent = 'OPEN';
+                
+                document.getElementById('closeGateBtn').style.display = 'block';
+                document.getElementById('openGateBtn').style.display = 'none';
+                
+                document.getElementById('operationCount').textContent = operationCount;
+                document.getElementById('overviewOperations').textContent = operationCount;
+                
+                // Send automatic announcement
+                addAnnouncement('info', 'Flood gate has been OPENED by LGU operator.');
+            }
+        }
+
+        // Announcement system
+        function sendAnnouncement() {
+            const type = document.getElementById('announcementType').value;
+            const message = document.getElementById('announcementMessage').value.trim();
+
+            if (!message) {
+                alert('Please enter an announcement message.');
+                return;
+            }
+
+            addAnnouncement(type, message);
+            document.getElementById('announcementMessage').value = '';
+            alert('Announcement sent successfully!');
+        }
+
+        function addAnnouncement(type, message) {
+            const listElement = document.getElementById('announcementList');
+            const typeClass = 'type-' + type;
+            const typeLabel = type.toUpperCase();
+            
+            announcementCountValue++;
+            document.getElementById('announcementCount').textContent = announcementCountValue;
+            
+            const announcementHTML = `
+                <div class="announcement-item">
+                    <div class="announcement-header">
+                        <span class="announcement-type ${typeClass}">${typeLabel}</span>
+                        <span class="announcement-time">Just now</span>
+                    </div>
+                    <div class="announcement-message">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            listElement.insertAdjacentHTML('afterbegin', announcementHTML);
+        }
+
+        // Simulate gate operation time
+        let gateOpenMinutes = 142;
+        setInterval(() => {
+            if (gateOpen) {
+                gateOpenMinutes++;
+                document.getElementById('gateOpenTime').textContent = gateOpenMinutes + ' min';
+            }
+        }, 60000); // Update every minute
+    </script>
+</body>
+</html>
