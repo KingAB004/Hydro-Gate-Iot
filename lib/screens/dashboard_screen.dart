@@ -41,39 +41,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ambientGrey,
-      appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20)),
-        backgroundColor: Color(0xFF007EA7),
-        elevation: 0,
-        foregroundColor: Colors.white,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: _showNotificationsDropdown,
-          ),
-        ],
-      ),
       drawer: _buildDrawer(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildWaterLevelMonitor(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _buildFloodgateControl()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildRainfallCard()),
-              ],
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      color: cerulean,
+                      iconSize: 28,
+                    ),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Dashboard',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
+                        color: cerulean,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: _showNotificationsDropdown,
+                    color: cerulean,
+                    iconSize: 28,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildWaterLevelMonitor(),
+              const SizedBox(height: 16),
+              _buildFloodgateControl(),
+              const SizedBox(height: 16),
+              _buildRainfallCard(),
+            ],
+          ),
         ),
       ),
     );
@@ -256,11 +266,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildFloodgateControl() {
+    final Color ringColor = isGateOpen ? cerulean : const Color(0xFFEF5350);
+    final Color fillColor = isGateOpen ? frostedBlueMedium : const Color(0xFFEF5350);
+    final Color textColor = isGateOpen ? cerulean : const Color(0xFFEF5350);
+    
     return Container(
-      height: 206, // Match rainfall card height
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.symmetric(vertical: 30.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -268,56 +281,186 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           GestureDetector(
             onTap: () {
-              setState(() {
-                isGateOpen = !isGateOpen;
-              });
+              if (isGateOpen) {
+                // Show confirmation dialog when closing the gate
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: const Color(0xFFF57C00), size: 28),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Close Floodgate?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      content: const Text(
+                        'Are you sure you want to close the floodgate? This will stop water flow.',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            setState(() {
+                              isGateOpen = false;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF5350),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                          child: const Text(
+                            'Close Gate',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              } else {
+                // Show confirmation dialog when opening the gate
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: cerulean, size: 28),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Open Floodgate?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      content: const Text(
+                        'Are you sure you want to open the floodgate? This will allow water flow.',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            setState(() {
+                              isGateOpen = true;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: cerulean,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                          child: const Text(
+                            'Open Gate',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
             },
             child: Container(
-              width: 90,
-              height: 90,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isGateOpen ? cerulean : const Color.fromARGB(255, 255, 82, 82),
+                border: Border.all(
+                  color: ringColor,
+                  width: 8,
+                ),
+                color: Colors.grey.shade200,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isGateOpen ? Icons.lock_open_rounded : Icons.lock_rounded,
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: fillColor,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.receipt_long,
                     color: Colors.white,
-                    size: 32,
+                    size: 60,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isGateOpen ? 'OPEN' : 'CLOSED',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           Text(
-            isGateOpen ? 'FLOW ACTIVE' : 'FLOW BLOCKED',
+            isGateOpen ? 'OPEN' : 'CLOSED',
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isGateOpen ? const Color(0xFF007EA7) : const Color.fromARGB(255, 255, 82, 82),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: textColor,
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'Floodgate',
+            isGateOpen ? 'Flow Active • Floodgate' : 'Flow Blocked • Floodgate',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
@@ -327,51 +470,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildRainfallCard() {
     return Container(
-      height: 206, // Match floodgate card height
-      padding: const EdgeInsets.all(20.0),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
         color: deepSpaceBlue,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
             Icons.water_drop,
-            color: Colors.white70,
-            size: 24,
+            color: Colors.white,
+            size: 28,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           const Text(
             'Rainfall',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.white70,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            '12',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w600,
-              color: Colors.white70,
-            ),
-          ),
-          const Text(
-            'mm/hr',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text(
+                '12',
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: const Text(
+                  'mm/hr',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           const Text(
             'Moderate Rain',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               color: Colors.white70,
               fontWeight: FontWeight.w500,
             ),
@@ -412,7 +565,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'John Doe',
+                  'Isaac Day',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -421,7 +574,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'john.doe@example.com',
+                  'q@gmail.com',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white70,
