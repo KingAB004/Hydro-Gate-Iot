@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFWMS Dashboard Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #FAFAFA;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 40px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1A1A1A;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 15px;
+            color: #757575;
+            font-weight: 400;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+            border: 1px solid #E0E0E0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            border-color: #D0D0D0;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1A1A1A;
+            letter-spacing: -0.3px;
+        }
+
+        .card-description {
+            color: #757575;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+
+        .card-features {
+            text-align: left;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+
+        .card-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-features li {
+            padding: 6px 0;
+            color: #757575;
+            font-weight: 400;
+        }
+
+        .card-features li:before {
+            content: "✓ ";
+            color: #000000;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: #000000;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #333333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .info-section {
+            background: white;
+            border: 1px solid #E0E0E0;
+            border-radius: 16px;
+            padding: 28px;
+            margin-top: 24px;
+        }
+
+        .info-section h3 {
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1A1A1A;
+            letter-spacing: -0.3px;
+        }
+
+        .info-section p {
+            font-size: 13px;
+            line-height: 1.7;
+            color: #757575;
+            font-weight: 400;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 32px;
+            }
+
+            .dashboard-card {
+                padding: 32px 24px;
+            }
+
+            .card-icon {
+                font-size: 40px;
+            }
+
+            .card-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 AFWMS</h1>
+            <p>Advanced Flood Warning & Water Management System</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Admin Dashboard -->
+            <a href="Admin/dashboard.html" class="dashboard-card">
+                <div class="card-icon">👨‍💼</div>
+                <h2 class="card-title">Admin Dashboard</h2>
+                <p class="card-description">Complete system management and control panel</p>
+                <div class="card-features">
+                    <ul>
+                        <li>User Management (CRUD)</li>
+                        <li>Hydrograte Monitoring</li>
+                        <li>System Announcements</li>
+                        <li>Full Analytics</li>
+                    </ul>
+                </div>
+                <button class="btn">Access Admin Panel</button>
+            </a>
+
+            <!-- LGU Dashboard -->
+            <a href="lgu/dashboard.html" class="dashboard-card">
+                <div class="card-icon">🏛️</div>
+                <h2 class="card-title">LGU Dashboard</h2>
+                <p class="card-description">Municipal water management and resident communications</p>
+                <div class="card-features">
+                    <ul>
+                        <li>Water Level Monitoring</li>
+                        <li>Resident Management</li>
+                        <li>Emergency Messages</li>
+                        <li>Alert Broadcasting</li>
+                    </ul>
+                </div>
+                <button class="btn">Access LGU Panel</button>
+            </a>
+        </div>
+
+        <div class="info-section">
+            <h3>📋 Dashboard Features</h3>
+            <p>
+                Both dashboards provide real-time monitoring and management of water levels, user accounts, and emergency communications. 
+                The Admin Dashboard offers comprehensive system control with advanced analytics, while the LGU Dashboard focuses on municipal-level 
+                water management and resident safety. All data is synchronized in real-time for coordinated emergency response.
+            </p>
+        </div>
+
+        <div class="info-section" style="margin-top: 15px;">
+            <h3>🔐 Access Information</h3>
+            <p>
+                <strong>Admin Account:</strong> john_admin / password<br>
+                <strong>LGU Account:</strong> maria_lgu / password<br><br>
+                Note: This is a simulation system. In production, use secure authentication and encrypted connections.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

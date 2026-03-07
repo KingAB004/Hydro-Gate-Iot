@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFWMS Admin Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>AFWMS</h1>
+                <p>Admin Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-tab="overview">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-btn" data-tab="users">
+                    <span class="icon">👥</span> User Management
+                </button>
+                <button class="nav-btn" data-tab="hydrograte">
+                    <span class="icon">💧</span> Hydrograte Status
+                </button>
+                <button class="nav-btn" data-tab="announcements">
+                    <span class="icon">📢</span> Announcements
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">A</div>
+                    <div class="profile-info">
+                        <p class="name">Admin User</p>
+                        <p class="role">Administrator</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="page-title">Dashboard Overview</h2>
+                </div>
+                <div class="header-right">
+                    <button class="btn-icon" id="refresh-btn" title="Refresh Data">
+                        🔄
+                    </button>
+                    <button class="btn-icon" id="settings-btn" title="Settings">
+                        ⚙️
+                    </button>
+                </div>
+            </header>
+
+            <!-- Tabs Content -->
+            <div class="content-area">
+                <!-- Overview Tab -->
+                <section id="overview" class="tab-content active">
+                    <div class="overview-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Total Users</p>
+                                <p class="stat-value" id="total-users">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💧</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Current Water Level</p>
+                                <p class="stat-value" id="water-level">0%</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Active Alerts</p>
+                                <p class="stat-value" id="active-alerts">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📢</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Pending Messages</p>
+                                <p class="stat-value" id="pending-messages">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h3>System Status</h3>
+                        <div class="status-box">
+                            <p><strong>Hydrograte Status:</strong> <span id="status-hydrograte" class="badge-success">Online</span></p>
+                            <p><strong>Last Updated:</strong> <span id="status-updated">--</span></p>
+                            <p><strong>System Health:</strong> <span id="status-health" class="badge-success">Healthy</span></p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- User Management Tab -->
+                <section id="users" class="tab-content">
+                    <div class="section-header">
+                        <h3>User Management</h3>
+                        <button class="btn btn-primary" id="add-user-btn">+ Add New User</button>
+                    </div>
+
+                    <!-- User Filter -->
+                    <div class="filter-bar">
+                        <input type="text" id="search-users" placeholder="Search users..." class="search-input">
+                        <select id="role-filter" class="filter-select">
+                            <option value="">All Roles</option>
+                            <option value="Admin">Admin</option>
+                            <option value="LGU">LGU</option>
+                            <option value="Homeowner">Homeowner</option>
+                        </select>
+                        <select id="status-filter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+
+                    <!-- Users Table -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- User Form Modal -->
+                    <div id="user-modal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 id="modal-title">Add New User</h3>
+                                <button class="close-btn" id="close-user-modal">&times;</button>
+                            </div>
+                            <form id="user-form">
+                                <input type="hidden" id="user-id">
+                                <div class="form-group">
+                                    <label for="username">Username:</label>
+                                    <input type="text" id="username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email:</label>
+                                    <input type="email" id="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="role">Role:</label>
+                                    <select id="role" required>
+                                        <option value="">Select Role</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="LGU">LGU</option>
+                                        <option value="Homeowner">Homeowner</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="password">Password:</label>
+                                    <input type="password" id="password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="status">Status:</label>
+                                    <select id="status">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">Save User</button>
+                                    <button type="button" class="btn btn-secondary" id="close-form-btn">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Hydrograte Status Tab -->
+                <section id="hydrograte" class="tab-content">
+                    <div class="section-header">
+                        <h3>Hydrograte Devices</h3>
+                        <button class="btn btn-primary" id="add-hydrograte-btn">+ Add Device</button>
+                    </div>
+
+                    <!-- Hydrogrates List -->
+                    <div id="hydrogrates-list" class="hydrogrates-grid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- Selected Device Details -->
+                    <div id="selected-device-details" style="margin-top: 40px;">
+                        <div class="section-header">
+                            <h3 id="selected-device-name">Select a device</h3>
+                            <button class="btn btn-secondary" id="refresh-hydrograte">🔄 Refresh</button>
+                        </div>
+
+                        <div class="hydrograte-grid">
+                            <!-- Status Overview -->
+                            <div class="card">
+                                <h4>Device Status</h4>
+                                <div class="status-detail">
+                                    <p><strong>Status:</strong> <span id="device-status" class="badge-success">Online</span></p>
+                                    <p><strong>Response Time:</strong> <span id="response-time">125ms</span></p>
+                                    <p><strong>Last Ping:</strong> <span id="last-ping">Just now</span></p>
+                                </div>
+                            </div>
+
+                            <!-- Water Level Gauge -->
+                            <div class="card">
+                                <h4>Current Water Level</h4>
+                                <div class="gauge-container">
+                                    <div class="gauge">
+                                        <div class="gauge-fill" id="gauge-fill"></div>
+                                        <div class="gauge-text" id="gauge-text">50%</div>
+                                    </div>
+                                    <p class="gauge-label"><span id="water-level-value">0.5</span>m / <span id="water-level-max">1.5</span>m</p>
+                                </div>
+                            </div>
+
+                            <!-- Model Information -->
+                            <div class="card">
+                                <h4>Device Information</h4>
+                                <div class="model-info">
+                                    <p><strong>Location:</strong> <span id="device-location">--</span></p>
+                                    <p><strong>Model:</strong> <span id="model-name">--</span></p>
+                                    <p><strong>Firmware:</strong> <span id="firmware-version">--</span></p>
+                                    <p><strong>Serial:</strong> <span id="serial-number">--</span></p>
+                                    <p><strong>Sensors:</strong> <span id="sensors-count">0</span> connected</p>
+                                    <p><strong>Installed:</strong> <span id="installation-date">--</span></p>
+                                </div>
+                            </div>
+
+                            <!-- Maintenance -->
+                            <div class="card">
+                                <h4>Maintenance Schedule</h4>
+                                <div class="maintenance-info">
+                                    <p><strong>Last Calibration:</strong> <span id="last-calibration">--</span></p>
+                                    <p><strong>Next Due:</strong> <span id="next-calibration">--</span></p>
+                                    <button class="btn btn-small" id="calibrate-btn">Calibrate Now</button>
+                                    <button class="btn btn-small btn-secondary" id="restart-btn">Restart Device</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error Logs -->
+                        <div class="card full-width">
+                            <h4>Recent Error Logs</h4>
+                            <div class="logs-container" id="error-logs">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hydrograte Form Modal -->
+                    <div id="hydrograte-modal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 id="hydrograte-modal-title">Add New Hydrograte Device</h3>
+                                <button class="close-btn" id="close-hydrograte-modal">&times;</button>
+                            </div>
+                            <form id="hydrograte-form">
+                                <input type="hidden" id="hydrograte-id">
+                                <div class="form-group">
+                                    <label for="device-name">Device Name:</label>
+                                    <input type="text" id="device-name" placeholder="e.g., Main Station - Downtown" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-loc">Location:</label>
+                                    <input type="text" id="device-loc" placeholder="e.g., Downtown Area, Sector A" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-model">Model:</label>
+                                    <input type="text" id="device-model" placeholder="e.g., Hydrograte-Pro-X1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-serial">Serial Number:</label>
+                                    <input type="text" id="device-serial" placeholder="e.g., HGP-2024-001" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-firmware">Firmware Version:</label>
+                                    <input type="text" id="device-firmware" placeholder="e.g., v2.4.1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-sensors">Number of Sensors:</label>
+                                    <input type="number" id="device-sensors" min="1" max="10" value="3" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-max-water">Max Water Level (meters):</label>
+                                    <input type="number" id="device-max-water" step="0.1" min="0.1" value="1.5" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="device-install-date">Installation Date:</label>
+                                    <input type="date" id="device-install-date" required>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">Save Device</button>
+                                    <button type="button" class="btn btn-secondary" id="close-hydrograte-form-btn">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Announcements Tab -->
+                <section id="announcements" class="tab-content">
+                    <div class="section-header">
+                        <h3>Announcements & Messages</h3>
+                        <button class="btn btn-primary" id="new-announcement-btn">+ New Announcement</button>
+                    </div>
+
+                    <!-- Create Announcement Form -->
+                    <div id="announcement-form-container" class="card" style="display: none;">
+                        <h4>Create New Announcement</h4>
+                        <form id="announcement-form">
+                            <div class="form-group">
+                                <label for="announcement-title">Title:</label>
+                                <input type="text" id="announcement-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-message">Message:</label>
+                                <textarea id="announcement-message" rows="4" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-type">Type:</label>
+                                <select id="announcement-type">
+                                    <option value="Info">Information</option>
+                                    <option value="Alert">Alert</option>
+                                    <option value="Warning">Warning</option>
+                                    <option value="Emergency">Emergency</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-audience">Target Audience:</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" value="Admin" checked> Admin</label>
+                                    <label><input type="checkbox" value="LGU" checked> LGU</label>
+                                    <label><input type="checkbox" value="Homeowner"> Homeowner</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label><input type="checkbox" id="schedule-announcement"> Schedule for later</label>
+                                <input type="datetime-local" id="schedule-time" style="display: none;">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Send Announcement</button>
+                                <button type="button" class="btn btn-secondary" id="cancel-announcement">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Announcements List -->
+                    <div class="announcements-container" id="announcements-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/users.js"></script>
+    <script src="js/hydrograte.js"></script>
+    <script src="js/announcements.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

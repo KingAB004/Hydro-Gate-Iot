@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFWMS LGU Dashboard</title>
+    <link rel="stylesheet" href="../Admin/css/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>AFWMS</h1>
+                <p>LGU Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-tab="overview">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-btn" data-tab="water-levels">
+                    <span class="icon">💧</span> Water Levels
+                </button>
+                <button class="nav-btn" data-tab="announcements">
+                    <span class="icon">📢</span> Messages
+                </button>
+                <button class="nav-btn" data-tab="residents">
+                    <span class="icon">👥</span> Residents
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">L</div>
+                    <div class="profile-info">
+                        <p class="name">Maria Santos</p>
+                        <p class="role">LGU Officer</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="page-title">Dashboard Overview</h2>
+                </div>
+                <div class="header-right">
+                    <button class="btn-icon" id="refresh-btn" title="Refresh Data">
+                        🔄
+                    </button>
+                    <button class="btn-icon" id="settings-btn" title="Settings">
+                        ⚙️
+                    </button>
+                </div>
+            </header>
+
+            <!-- Tabs Content -->
+            <div class="content-area">
+                <!-- Overview Tab -->
+                <section id="overview" class="tab-content active">
+                    <div class="overview-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">💧</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Current Water Level</p>
+                                <p class="stat-value" id="water-level">0%</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Active Alerts</p>
+                                <p class="stat-value" id="active-alerts">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Residents Registered</p>
+                                <p class="stat-value" id="resident-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📢</div>
+                            <div class="stat-info">
+                                <p class="stat-label">Messages Sent</p>
+                                <p class="stat-value" id="messages-sent">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recent-activity">
+                        <h3>Recent Alerts</h3>
+                        <div id="recent-alerts-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Water Levels Tab -->
+                <section id="water-levels" class="tab-content">
+                    <div class="section-header">
+                        <h3>Water Level Monitoring</h3>
+                        <button class="btn btn-secondary" id="refresh-water-levels">🔄 Refresh</button>
+                    </div>
+
+                    <div class="hydrograte-grid">
+                        <!-- Current Water Level -->
+                        <div class="card">
+                            <h4>Current Status</h4>
+                            <div class="gauge-container">
+                                <div class="gauge">
+                                    <div class="gauge-fill" id="gauge-fill"></div>
+                                    <div class="gauge-text" id="gauge-text">50%</div>
+                                </div>
+                                <p class="gauge-label"><span id="water-level-value">0.5</span>m / <span id="water-level-max">1.5</span>m</p>
+                            </div>
+                        </div>
+
+                        <!-- Water Level Status -->
+                        <div class="card">
+                            <h4>Level Assessment</h4>
+                            <div class="status-detail">
+                                <p><strong>Status:</strong> <span id="level-status" class="badge-success">Safe</span></p>
+                                <p><strong>Trend:</strong> <span id="level-trend">Stable</span></p>
+                                <p><strong>Safe Threshold:</strong> <span id="safe-threshold">0.8m</span></p>
+                                <p><strong>Critical Level:</strong> <span id="critical-level">1.2m</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Device Info -->
+                        <div class="card">
+                            <h4>Device Information</h4>
+                            <div class="model-info">
+                                <p><strong>Device Status:</strong> <span id="device-status" class="badge-success">Online</span></p>
+                                <p><strong>Last Update:</strong> <span id="last-update">Just now</span></p>
+                                <p><strong>Response Time:</strong> <span id="response-time">125ms</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Recommended Actions -->
+                        <div class="card">
+                            <h4>Recommended Actions</h4>
+                            <div id="recommended-actions">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Water Level History -->
+                    <div class="card full-width">
+                        <h4>Water Level History (Last 24 Hours)</h4>
+                        <div id="water-level-chart" style="height: 300px; background-color: var(--light-bg); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                            <p>Chart visualization would be displayed here</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Announcements/Messages Tab -->
+                <section id="announcements" class="tab-content">
+                    <div class="section-header">
+                        <h3>Messages & Announcements</h3>
+                        <button class="btn btn-primary" id="new-message-btn">+ Send Message</button>
+                    </div>
+
+                    <!-- Send Message Form -->
+                    <div id="message-form-container" class="card" style="display: none;">
+                        <h4>Send Message to Residents</h4>
+                        <form id="message-form">
+                            <div class="form-group">
+                                <label for="message-title">Subject:</label>
+                                <input type="text" id="message-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="message-content">Message:</label>
+                                <textarea id="message-content" rows="4" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="message-priority">Priority:</label>
+                                <select id="message-priority">
+                                    <option value="Normal">Normal</option>
+                                    <option value="High">High</option>
+                                    <option value="Urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="message-type">Type:</label>
+                                <select id="message-type">
+                                    <option value="Advisory">Advisory</option>
+                                    <option value="Warning">Warning</option>
+                                    <option value="Emergency">Emergency</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Send Message</button>
+                                <button type="button" class="btn btn-secondary" id="cancel-message">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Messages List -->
+                    <div class="announcements-container" id="messages-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Residents Tab -->
+                <section id="residents" class="tab-content">
+                    <div class="section-header">
+                        <h3>Registered Residents</h3>
+                    </div>
+
+                    <!-- Residents Filter -->
+                    <div class="filter-bar">
+                        <input type="text" id="search-residents" placeholder="Search residents..." class="search-input">
+                        <select id="area-filter" class="filter-select">
+                            <option value="">All Areas</option>
+                            <option value="Downtown">Downtown</option>
+                            <option value="Residential">Residential</option>
+                            <option value="Industrial">Industrial</option>
+                        </select>
+                    </div>
+
+                    <!-- Residents Table -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Area</th>
+                                    <th>Status</th>
+                                    <th>Registered</th>
+                                </tr>
+                            </thead>
+                            <tbody id="residents-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Sample data for LGU Dashboard
+        let lguWaterData = {
+            currentLevel: 0.65,
+            maxLevel: 1.5,
+            safeThreshold: 0.8,
+            criticalLevel: 1.2,
+            lastUpdate: new Date().toLocaleTimeString(),
+            trend: 'Stable',
+            responseTime: 125,
+            status: 'Online'
+        };
+
+        let residents = [
+            { id: 1, name: 'Juan Dela Cruz', email: 'juan@email.com', area: 'Downtown', status: 'Active', registered: '2025-01-15' },
+            { id: 2, name: 'Maria Garcia', email: 'maria@email.com', area: 'Residential', status: 'Active', registered: '2025-02-01' },
+            { id: 3, name: 'Pedro Santos', email: 'pedro@email.com', area: 'Downtown', status: 'Active', registered: '2025-02-15' },
+            { id: 4, name: 'Rosa Lopez', email: 'rosa@email.com', area: 'Industrial', status: 'Inactive', registered: '2025-01-20' },
+        ];
+
+        let lguMessages = [
+            { id: 1, title: 'Flood Alert', content: 'High water levels detected. Avoid low-lying areas.', type: 'Warning', priority: 'Urgent', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(), status: 'Sent' },
+            { id: 2, title: 'Checkup Reminder', content: 'Please ensure all residents in flood zones are safe.', type: 'Advisory', priority: 'High', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(), status: 'Sent' },
+        ];
+
+        let nextMessageId = 3;
+
+        // Initialize LGU Dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initLGUDashboard();
+        });
+
+        function initLGUDashboard() {
+            setupTabNavigation();
+            renderWaterLevelData();
+            renderResidents();
+            renderMessages();
+            updateLGUStats();
+            attachLGUEventListeners();
+        }
+
+        function setupTabNavigation() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    
+                    document.getElementById(tabName).classList.add('active');
+                    this.classList.add('active');
+
+                    const titles = {
+                        'overview': 'Dashboard Overview',
+                        'water-levels': 'Water Level Monitoring',
+                        'announcements': 'Messages & Announcements',
+                        'residents': 'Registered Residents'
+                    };
+                    document.getElementById('page-title').textContent = titles[tabName];
+                });
+            });
+        }
+
+        function renderWaterLevelData() {
+            const waterPercent = (lguWaterData.currentLevel / lguWaterData.maxLevel) * 100;
+            
+            document.getElementById('gauge-fill').style.setProperty('--gauge-rotation', (waterPercent * 3.6) + 'deg');
+            document.getElementById('gauge-text').textContent = Math.round(waterPercent) + '%';
+            document.getElementById('water-level-value').textContent = lguWaterData.currentLevel.toFixed(2);
+            document.getElementById('water-level-max').textContent = lguWaterData.maxLevel.toFixed(2);
+            document.getElementById('water-level').textContent = Math.round(waterPercent) + '%';
+            document.getElementById('last-update').textContent = lguWaterData.lastUpdate;
+            document.getElementById('response-time').textContent = lguWaterData.responseTime + 'ms';
+
+            // Status
+            let statusBadge = 'badge-success';
+            let statusText = 'Safe';
+            if (lguWaterData.currentLevel > lguWaterData.criticalLevel) {
+                statusBadge = 'badge-danger';
+                statusText = 'Critical';
+            } else if (lguWaterData.currentLevel > lguWaterData.safeThreshold) {
+                statusBadge = 'badge-warning';
+                statusText = 'Warning';
+            }
+            document.getElementById('level-status').className = statusBadge;
+            document.getElementById('level-status').textContent = statusText;
+
+            // Recommended Actions
+            const actionsDiv = document.getElementById('recommended-actions');
+            let actions = '<div style="padding: 10px;">';
+            if (lguWaterData.currentLevel > lguWaterData.criticalLevel) {
+                actions += '<p>⚠️ <strong>Evacuate</strong> residents from flood zones immediately</p>';
+                actions += '<p>⚠️ Alert emergency services</p>';
+            } else if (lguWaterData.currentLevel > lguWaterData.safeThreshold) {
+                actions += '<p>⚠️ <strong>Advise</strong> residents to prepare for evacuation</p>';
+                actions += '<p>⚠️ Monitor water levels closely</p>';
+            } else {
+                actions += '<p>✓ System operating normally</p>';
+                actions += '<p>✓ Continue regular monitoring</p>';
+            }
+            actions += '</div>';
+            actionsDiv.innerHTML = actions;
+
+            // Recent alerts
+            const alertsList = document.getElementById('recent-alerts-list');
+            alertsList.innerHTML = `
+                <div class="announcement-card warning" style="margin-bottom: 10px;">
+                    <h4>Water Level Alert</h4>
+                    <p>Current level: ${lguWaterData.currentLevel}m (${Math.round(waterPercent)}%)</p>
+                    <p style="color: #666; font-size: 12px;">Updated at ${lguWaterData.lastUpdate}</p>
+                </div>
+            `;
+        }
+
+        function renderResidents() {
+            const tbody = document.getElementById('residents-tbody');
+            tbody.innerHTML = '';
+
+            residents.forEach(resident => {
+                const statusBadge = resident.status === 'Active' ? 'badge-success' : 'badge-danger';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>#${resident.id}</td>
+                    <td>${resident.name}</td>
+                    <td>${resident.email}</td>
+                    <td>${resident.area}</td>
+                    <td><span class="badge ${statusBadge}">${resident.status}</span></td>
+                    <td>${resident.registered}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messages-list');
+            container.innerHTML = '';
+
+            lguMessages.forEach(msg => {
+                const typeColor = msg.type === 'Warning' ? 'warning' :  msg.type === 'Emergency' ? 'emergency' : 'alert';
+                const card = document.createElement('div');
+                card.className = `announcement-card ${typeColor}`;
+                card.innerHTML = `
+                    <div class="announcement-header">
+                        <h4 class="announcement-title">${msg.title}</h4>
+                    </div>
+                    <p class="announcement-message">${msg.content}</p>
+                    <div class="announcement-meta">
+                        <span class="badge-info">${msg.type}</span>
+                        <span class="badge-info">${msg.priority}</span>
+                        <span class="announcement-time">📅 ${msg.timestamp}</span>
+                    </div>
+                    <div class="announcement-actions">
+                        <button class="btn-delete-announcement" onclick="deleteMessage(${msg.id})">Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function attachLGUEventListeners() {
+            document.getElementById('new-message-btn')?.addEventListener('click', toggleMessageForm);
+            document.getElementById('message-form')?.addEventListener('submit', handleMessageSubmit);
+            document.getElementById('cancel-message')?.addEventListener('click', toggleMessageForm);
+            document.getElementById('refresh-btn')?.addEventListener('click', refreshLGUData);
+            document.getElementById('refresh-water-levels')?.addEventListener('click', refreshWaterLevels);
+            document.getElementById('search-residents')?.addEventListener('input', filterResidents);
+        }
+
+        function toggleMessageForm() {
+            const form = document.getElementById('message-form-container');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function handleMessageSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('message-title').value;
+            const content = document.getElementById('message-content').value;
+            
+            lguMessages.unshift({
+                id: nextMessageId++,
+                title,
+                content,
+                type: document.getElementById('message-type').value,
+                priority: document.getElementById('message-priority').value,
+                timestamp: new Date().toLocaleString(),
+                status: 'Sent'
+            });
+
+            renderMessages();
+            toggleMessageForm();
+            alert('Message sent to residents!');
+        }
+
+        function deleteMessage(id) {
+            if (confirm('Delete this message?')) {
+                lguMessages = lguMessages.filter(m => m.id !== id);
+                renderMessages();
+            }
+        }
+
+        function filterResidents() {
+            const search = document.getElementById('search-residents').value.toLowerCase();
+            const filtered = residents.filter(r => r.name.toLowerCase().includes(search));
+            
+            const tbody = document.getElementById('residents-tbody');
+            tbody.innerHTML = '';
+            filtered.forEach(resident => {
+                const statusBadge = resident.status === 'Active' ? 'badge-success' : 'badge-danger';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>#${resident.id}</td>
+                    <td>${resident.name}</td>
+                    <td>${resident.email}</td>
+                    <td>${resident.area}</td>
+                    <td><span class="badge ${statusBadge}">${resident.status}</span></td>
+                    <td>${resident.registered}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function refreshWaterLevels() {
+            lguWaterData.currentLevel = Math.random() * lguWaterData.maxLevel;
+            lguWaterData.lastUpdate = new Date().toLocaleTimeString();
+            renderWaterLevelData();
+        }
+
+        function refreshLGUData() {
+            refreshWaterLevels();
+            updateLGUStats();
+        }
+
+        function updateLGUStats() {
+            const waterPercent = (lguWaterData.currentLevel / lguWaterData.maxLevel) * 100;
+            document.getElementById('water-level').textContent = Math.round(waterPercent) + '%';
+            document.getElementById('resident-count').textContent = residents.length;
+            document.getElementById('messages-sent').textContent = lguMessages.length;
+            document.getElementById('active-alerts').textContent = lguMessages.length;
+        }
+    </script>
+</body>
+</html>
