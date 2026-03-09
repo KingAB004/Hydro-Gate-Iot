@@ -7,7 +7,9 @@ class WeatherService {
   // Initialize environment variables with fallbacks
   static String get _apiKey {
     try {
+      print("🔍 Debug: All env vars: ${dotenv.env}");
       final key = dotenv.env['OPENWEATHER_API_KEY'];
+      print("🔑 Debug: Raw key from env: '$key'");
       if (key == null || key.isEmpty) {
         throw Exception('OpenWeatherMap API key not configured. Please add OPENWEATHER_API_KEY to your .env file.');
       }
