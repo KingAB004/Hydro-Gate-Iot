@@ -8,7 +8,8 @@ Before we start, make sure you have the following installed on your machine:
 - **Flutter SDK** (v3.10.4 or higher) - [Download here](https://docs.flutter.dev/get-started/install)
 - **Dart SDK** (Included when you install Flutter)
 - **Code Editor** (VS Code, Android Studio, or IntelliJ)
-- **Firebase Account** (if we are using it for backend/auth)
+- **Firebase Account** (for backend/auth features)
+- **OpenWeatherMap Account** (for weather functionality) - [Sign up here](https://openweathermap.org/api)
 
 ---
 
@@ -50,7 +51,38 @@ flutterfire configure --project=afwms-d3141
 ```
 This will connect to Firebase using the specific project id used in the app. After this, the `lib/firebase_options.dart` file will be generated automatically.
 
-### 4. Run the App
+### 4. Environment Variables Setup (API Keys)
+The app uses environment variables to securely store API keys. This prevents sensitive information from being pushed to GitHub.
+
+**a. Copy the environment template**
+Copy the `.env.example` file to create your own `.env` file:
+```bash
+cp .env.example .env
+```
+*(On Windows Command Prompt, use: `copy .env.example .env`)*
+
+**b. Get OpenWeatherMap API Key**
+1. Go to [OpenWeatherMap](https://openweathermap.org/api)
+2. Create a free account
+3. Verify your email address (check your inbox!)
+4. Go to [API Keys](https://home.openweathermap.org/api_keys)
+5. Generate a new API key
+6. Wait 10-120 minutes for activation (this is normal)
+
+**c. Configure your `.env` file**
+Open your `.env` file and replace `your_api_key_here` with your actual API key:
+```dotenv
+OPENWEATHER_API_KEY=your_actual_api_key_here
+```
+
+**d. Test your API key**
+You can test if your API key works by visiting this URL in your browser:
+```
+https://api.openweathermap.org/data/2.5/weather?q=Manila&appid=YOUR_API_KEY&units=metric
+```
+*(Replace `YOUR_API_KEY` with your actual key)*
+
+### 5. Run the App
 Once the dependencies and Firebase configuration are okay, we can test the app!
 
 If you want to see the list of available devices:
@@ -66,21 +98,45 @@ To run the app:
 
 ## 🛠 Troubleshooting Common Errors
 
-### "Undefined name 'DefaultFirebaseOptions'" or "Error when reading 'lib/firebase_options.dart'"
+### Firebase Errors
+**"Undefined name 'DefaultFirebaseOptions'" or "Error when reading 'lib/firebase_options.dart'"**
 - This means your Firebase configuration hasn't been generated locally yet. Just go back to **Step 3.c** (`flutterfire configure --project=afwms-d3141`) and make sure you are in the root directory of the project (`AFWMS/`).
 
-### "Building with plugins requires symlink support" (Windows)
+### Weather API Errors
+**"Invalid API key" error in Weather screen**
+- Check if you copied your API key correctly in the `.env` file
+- Make sure your email is verified with OpenWeatherMap
+- Wait 1-2 hours for the API key to activate (this is normal for new accounts)
+- Test your key using the URL provided in Step 4.d
+
+**Weather screen shows error or won't load**
+- Make sure your `.env` file exists and has the correct API key
+- Check that your OpenWeatherMap API key is valid and activated
+- Verify your internet connection
+
+### System Errors
+**"Building with plugins requires symlink support" (Windows)**
 - You need to enable **Developer Mode** in your Windows Settings. You can type in the terminal:
   ```bash
   start ms-settings:developers
   ```
   Then turn on Developer Mode.
 
-### "1 package has newer versions incompatible with dependency constraints"
+### Package Version Errors
+**"1 package has newer versions incompatible with dependency constraints"**
 - This is sometimes normal when there are version mismatches. If you want to update to the latest compatible versions, run:
   ```bash
   flutter pub upgrade
   ```
 
 ---
-Happy coding! 💻
+
+## 📁 Project Structure Notes
+
+- **`.env`** - Your local environment variables (never commit this!)
+- **`.env.example`** - Template for environment variables (safe to commit)  
+- **`lib/firebase_options.dart`** - Auto-generated Firebase config (in .gitignore)
+- **Weather integration** - Uses OpenWeatherMap API for real-time weather data
+
+---
+Happy coding! 💻 🌤️
