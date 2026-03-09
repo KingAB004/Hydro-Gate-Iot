@@ -436,7 +436,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Center(
                   child: Icon(
-                    Icons.receipt_long,
+                    Icons.sensor_door,
                     color: Colors.white,
                     size: 60,
                   ),

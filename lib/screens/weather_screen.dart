@@ -35,9 +35,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ambientGrey,
-      body: SafeArea(
+    return SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -86,7 +84,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 

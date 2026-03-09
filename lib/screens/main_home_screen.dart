@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'weather_screen.dart';
+import 'alerts_screen.dart';
 
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
@@ -14,6 +15,7 @@ class MainHomeScreenState extends State<MainHomeScreen> {
 
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
+    AlertsScreen(),
     WeatherScreen(),
   ];
 
@@ -26,12 +28,17 @@ class MainHomeScreenState extends State<MainHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFCCDBDC),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            label: 'Alerts',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.cloud_outlined),

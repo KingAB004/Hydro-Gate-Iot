@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/alerts_dropdown.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -12,6 +13,25 @@ class _AlertsScreenState extends State<AlertsScreen> {
   static const Color deepSpaceBlue = Color(0xFF003249);
   static const Color cerulean = Color(0xFF007EA7);
   static const Color ambientGrey = Color(0xFFCCDBDC);
+
+  void _showNotificationsDropdown() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.2),
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: 60,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: const AlertsDropdown(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Alert priority colors
   static const Color highPriorityBg = Color(0xFFFEE2E2);
@@ -60,19 +80,40 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ambientGrey,
-      appBar: AppBar(
-        title: const Text('Alerts', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 20)),
-        backgroundColor: Color(0xFF007EA7),
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
+    return SafeArea(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios),
+                  onPressed: () => Navigator.pop(context),
+                  color: cerulean,
+                  iconSize: 24,
+                ),
+                const Expanded(
+                  child: Text(
+                    'Alerts',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                      color: cerulean,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: _showNotificationsDropdown,
+                  color: cerulean,
+                  iconSize: 28,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             const Text(
               'Recent notifications and warnings',
               style: TextStyle(
