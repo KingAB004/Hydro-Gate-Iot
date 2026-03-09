@@ -24,6 +24,13 @@ class MainHomeScreenState extends State<MainHomeScreen> {
       _selectedIndex = index;
     });
   }
+  
+  // Method to navigate to home tab from child screens
+  void navigateToHome() {
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

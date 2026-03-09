@@ -3,6 +3,7 @@ import '../widgets/alerts_dropdown.dart';
 import '../services/weather_service.dart';
 import '../models/weather_models.dart';
 import '../utils/weather_utils.dart';
+import 'main_home_screen.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -92,7 +93,13 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back_ios),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          // Navigate back to home tab instead of popping navigation stack
+                          final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
+                          if (mainScreen != null) {
+                            mainScreen.navigateToHome();
+                          }
+                        },
                         color: cerulean,
                         iconSize: 24,
                       ),

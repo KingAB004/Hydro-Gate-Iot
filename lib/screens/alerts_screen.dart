@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/alerts_dropdown.dart';
+import 'main_home_screen.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -90,7 +91,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back_ios),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    // Navigate back to home tab instead of popping navigation stack
+                    final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
+                    if (mainScreen != null) {
+                      mainScreen.navigateToHome();
+                    }
+                  },
                   color: cerulean,
                   iconSize: 24,
                 ),
