@@ -44,6 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Environment variables
+.env
+.env.local
+.env.production
+
 # Firebase configuration files
 lib/firebase_options.dart
 android/app/google-services.json

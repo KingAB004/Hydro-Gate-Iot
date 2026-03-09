@@ -7,13 +7,15 @@ class WeatherService {
   // Initialize environment variables with fallbacks
   static String get _apiKey {
     try {
-      final key = dotenv.env['OPENWEATHER_API_KEY'] ?? '0a428c33d880ef5798145243b047d322';
-      print("API Key loaded: ${key.isEmpty ? 'EMPTY' : 'SUCCESS (${key.length} characters)'}");
+      final key = dotenv.env['OPENWEATHER_API_KEY'];
+      if (key == null || key.isEmpty) {
+        throw Exception('OpenWeatherMap API key not configured. Please add OPENWEATHER_API_KEY to your .env file.');
+      }
+      print("API Key loaded: SUCCESS (${key.length} characters)");
       return key;
     } catch (e) {
-      print("Error accessing dotenv for API key: $e");
-      // Fallback if dotenv is not initialized
-      return '0a428c33d880ef5798145243b047d322';
+      print("Error accessing API key: $e");
+      throw Exception('Failed to load OpenWeatherMap API key. Please check your .env configuration.');
     }
   }
   
