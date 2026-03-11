@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../widgets/alerts_dropdown.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -17,6 +19,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const Color frostedBlueMedium = Color(0xFF80CED7);
   static const Color frostedBlueLight = Color(0xFF9AD1D4);
   static const Color ambientGrey = Color(0xFFCCDBDC);
+
+  String _username = 'Loading...';
+  String _email = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (mounted) {
+        setState(() {
+          _email = user.email ?? 'No Email';
+          _username = user.displayName ?? 'User';
+        });
+      }
+      try {
+        final snapshot = await FirebaseDatabase.instance.ref('users/${user.uid}').get();
+        if (snapshot.exists) {
+          final data = snapshot.value as Map<dynamic, dynamic>;
+          if (mounted) {
+            setState(() {
+              _username = data['username'] ?? _username;
+            });
+          }
+        }
+      } catch (e) {
+        print("Error fetching user data: $e");
+      }
+    }
+  }
 
   void _showNotificationsDropdown() {
     showDialog(
@@ -564,18 +600,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Isaac Day',
-                  style: TextStyle(
+                Text(
+                  _username,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'q@gmail.com',
-                  style: TextStyle(
+                Text(
+                  _email,
+                  style: const TextStyle(
                     fontSize: 14,
                     color: Colors.white70,
                   ),
