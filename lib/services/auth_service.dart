@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -28,7 +29,26 @@ class AuthService {
       );
 
       // Once signed in, return the UserCredential
-      return await _auth.signInWithCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      // Save user to Realtime Database if they don't exist yet
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        final userRef = FirebaseDatabase.instance.ref('users/$uid');
+        final snapshot = await userRef.get();
+        
+        if (!snapshot.exists) {
+          await userRef.set({
+            'username': userCredential.user!.displayName ?? 'Google User',
+            'email': userCredential.user!.email ?? '',
+            'role': 'Homeowner', 
+            'status': 'Active',
+            'joined': DateTime.now().toIso8601String().split('T')[0],
+          });
+        }
+      }
+
+      return userCredential;
     } catch (e) {
       print("Error signing in with Google: $e");
       rethrow;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -62,10 +63,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      
+      // Save user to Realtime Database
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        final userRef = FirebaseDatabase.instance.ref('users/$uid');
+        
+        // Use the email part before '@' as username if you don't have a username field
+        final defaultUsername = email.split('@').first;
+        
+        await userRef.set({
+          'username': defaultUsername,
+          'email': email,
+          'role': 'Homeowner', 
+          'status': 'Active',
+          'joined': DateTime.now().toIso8601String().split('T')[0],
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
