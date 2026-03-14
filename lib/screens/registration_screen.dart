@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -68,15 +68,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         password: password,
       );
       
-      // Save user to Realtime Database
+      // Save user to Firestore
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
-        final userRef = FirebaseDatabase.instance.ref('users/$uid');
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
         
         // Use the email part before '@' as username if you don't have a username field
         final defaultUsername = email.split('@').first;
         
-        await userRef.set({
+        await userDoc.set({
           'username': defaultUsername,
           'email': email,
           'role': 'Homeowner', 

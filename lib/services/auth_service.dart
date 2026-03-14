@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -31,14 +31,14 @@ class AuthService {
       // Once signed in, return the UserCredential
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // Save user to Realtime Database if they don't exist yet
+      // Save user to Firestore if they don't exist yet
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
-        final userRef = FirebaseDatabase.instance.ref('users/$uid');
-        final snapshot = await userRef.get();
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+        final snapshot = await userDoc.get();
         
         if (!snapshot.exists) {
-          await userRef.set({
+          await userDoc.set({
             'username': userCredential.user!.displayName ?? 'Google User',
             'email': userCredential.user!.email ?? '',
             'role': 'Homeowner', 

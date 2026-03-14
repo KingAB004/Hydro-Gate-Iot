@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -45,10 +46,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
       try {
-        final snapshot = await FirebaseDatabase.instance.ref('users/${user.uid}').get();
+        final snapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (snapshot.exists) {
-          final data = snapshot.value as Map<dynamic, dynamic>;
-          if (mounted) {
+          final data = snapshot.data();
+          if (data != null && mounted) {
             setState(() {
               _username = data['username'] ?? _username;
             });
