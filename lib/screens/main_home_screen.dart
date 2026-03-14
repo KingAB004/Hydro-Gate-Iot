@@ -35,29 +35,44 @@ class MainHomeScreenState extends State<MainHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFCCDBDC),
+      backgroundColor: const Color(0xFFF8FAFC), // Modern bgLight
       body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Alerts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.cloud_outlined),
-            label: 'Weather',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        backgroundColor: const Color(0xFF007EA7),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white60,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          indicatorColor: const Color(0xFF0EA5E9).withOpacity(0.15),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined, color: Color(0xFF64748B)),
+              selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF0EA5E9)),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.notifications_none_rounded, color: Color(0xFF64748B)),
+              selectedIcon: Icon(Icons.notifications_rounded, color: Color(0xFF0EA5E9)),
+              label: 'Alerts',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.cloud_queue_rounded, color: Color(0xFF64748B)),
+              selectedIcon: Icon(Icons.cloud_rounded, color: Color(0xFF0EA5E9)),
+              label: 'Weather',
+            ),
+          ],
+        ),
       ),
     );
   }
