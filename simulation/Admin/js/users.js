@@ -11,17 +11,13 @@ window.initUsersManagement = async function() {
 };
 
 async function fetchUsers() {
-    const db = window.db;
+    const firestoreDb = window.firestoreDb;
     try {
-        const usersRef = db.ref('users');
-        const snapshot = await usersRef.once('value');
+        const snapshot = await firestoreDb.collection('users').get();
         users = [];
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            for (let uid in data) {
-                users.push({ id: uid, ...data[uid] });
-            }
-        }
+        snapshot.forEach(doc => {
+            users.push({ id: doc.id, ...doc.data() });
+        });
         window.users = users;
         filteredUsers = [...users];
         renderUsersTable();
@@ -56,6 +52,13 @@ function attachUserEventListeners() {
 function openAddUserModal() {
     document.getElementById('user-id').value = '';
     document.getElementById('user-form').reset();
+    
+    // Make sure email is editable when adding a new user
+    const emailInput = document.getElementById('email');
+    emailInput.removeAttribute('readonly');
+    emailInput.style.backgroundColor = '';
+    emailInput.title = "";
+
     document.getElementById('password').closest('.form-group').style.display = 'block';
     document.getElementById('password').required = true;
     document.getElementById('modal-title').textContent = 'Add New User';
@@ -78,13 +81,13 @@ async function handleUserFormSubmit(e) {
     const password = document.getElementById('password').value;
     const status = document.getElementById('status').value;
 
-    const db = window.db;
+    const firestoreDb = window.firestoreDb;
 
     if (userId) {
         // Update existing user
         try {
-            const userRef = db.ref('users/' + userId);
-            await userRef.update({
+            const userDoc = firestoreDb.collection('users').doc(userId);
+            await userDoc.update({
                 username,
                 email,
                 role,
@@ -103,9 +106,9 @@ async function handleUserFormSubmit(e) {
             const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, password);
             const newUid = userCredential.user.uid;
 
-            // Add user details to Realtime Database
-            const userRef = db.ref('users/' + newUid);
-            await userRef.set({
+            // Add user details to Firestore Database
+            const userDoc = firestoreDb.collection('users').doc(newUid);
+            await userDoc.set({
                 username,
                 email,
                 role,
@@ -181,7 +184,14 @@ window.editUser = function(id) {
 
     document.getElementById('user-id').value = user.id;
     document.getElementById('username').value = user.username;
-    document.getElementById('email').value = user.email;
+    
+    // Set email and make it disabled/readonly so admin can't change it and break auth mappings
+    const emailInput = document.getElementById('email');
+    emailInput.value = user.email;
+    emailInput.setAttribute('readonly', 'true');
+    emailInput.style.backgroundColor = '#f0f0f0';
+    emailInput.title = "Email cannot be changed after creation for security reasons.";
+
     document.getElementById('role').value = user.role;
     document.getElementById('status').value = user.status;
     
@@ -197,11 +207,10 @@ window.editUser = function(id) {
 
 // Delete User
 window.deleteUser = async function(id) {
-    if (confirm('Are you sure you want to delete this user from the dashboard list? Note: This deletes the Realtime Database profile, but cannot delete the Firebase Auth account directly from the client.')) {
-        const db = window.db;
+    if (confirm('Are you sure you want to delete this user from the dashboard list? Note: This deletes the Firestore profile, but cannot delete the Firebase Auth account directly from the client.')) {
+        const firestoreDb = window.firestoreDb;
         try {
-            const userRef = db.ref('users/' + id);
-            await userRef.remove();
+            await firestoreDb.collection('users').doc(id).delete();
             await fetchUsers(); // Refresh list
         } catch(error) {
             console.error("Error deleting user: ", error);
