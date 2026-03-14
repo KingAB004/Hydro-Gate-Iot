@@ -4,7 +4,7 @@ This is the step-by-step guide to set up and run the project smoothly after clon
 
 ## 📝 Prerequisites
 Before we start, make sure you have the following installed on your machine:
-- **Git** (for cloning)
+- **Git** (for cloning, and it must be available in your system `PATH`)
 - **Flutter SDK** (v3.10.4 or higher) - [Download here](https://docs.flutter.dev/get-started/install)
 - **Dart SDK** (Included when you install Flutter)
 - **Code Editor** (VS Code, Android Studio, or IntelliJ)
@@ -36,15 +36,26 @@ If you don't have FlutterFire CLI installed globally yet, run:
 ```bash
 dart pub global activate flutterfire_cli
 ```
-*(Note: If you see a warning that it's not in your `PATH` environment variable, add the path it provides to your system environment variables.)*
+*(Note: On Windows, add `C:\Users\<your-username>\AppData\Local\Pub\Cache\bin` to your `PATH` environment variable if `flutterfire` is not recognized after installation.)*
 
-**b. Login to Firebase**
+**b. Install Firebase CLI**
+The `firebase login` command requires the Firebase CLI. Install it first:
+
+Option 1: With Node.js and npm installed
+```bash
+npm install -g firebase-tools
+```
+
+Option 2: Download the standalone Firebase CLI from the official docs
+- [Firebase CLI setup guide](https://firebase.google.com/docs/cli)
+
+**c. Login to Firebase**
 Before configuring, you must be logged into your Firebase account:
 ```bash
 firebase login
 ```
 
-**c. Configure Firebase**
+**d. Configure Firebase**
 To generate the missing `firebase_options.dart` file (where errors often occur when missing):
 ```bash
 flutterfire configure --project=afwms-d3141
@@ -124,6 +135,36 @@ To run the app:
   start ms-settings:developers
   ```
   Then turn on Developer Mode.
+
+**"git : The term 'git' is not recognized..." when running Flutter or Dart commands**
+- Install **Git for Windows** from [git-scm.com](https://git-scm.com/download/win)
+- During installation, keep the option that adds Git to your command line tools / `PATH`
+- After installation, fully close and reopen your terminal or VS Code
+- Verify it works with:
+  ```bash
+  git --version
+  ```
+- Then retry the original command, for example:
+  ```bash
+  dart pub global activate flutterfire_cli
+  ```
+
+**"flutterfire : The term 'flutterfire' is not recognized..."**
+- Add `C:\Users\<your-username>\AppData\Local\Pub\Cache\bin` to your `PATH`
+- Fully close and reopen your terminal or VS Code
+- Verify it works with:
+  ```bash
+  flutterfire --version
+  ```
+
+**"firebase : The term 'firebase' is not recognized..."**
+- Install the Firebase CLI by following Step 3.b
+- If you installed it with npm, make sure Node.js and npm are installed and available in your `PATH`
+- Fully close and reopen your terminal or VS Code
+- Verify it works with:
+  ```bash
+  firebase --version
+  ```
 
 ### Package Version Errors
 **"1 package has newer versions incompatible with dependency constraints"**
