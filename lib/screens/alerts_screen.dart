@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
 import 'main_home_screen.dart';
 
@@ -22,6 +23,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
   static const Color successGreen = Color(0xFF10B981);
   static const Color infoBlue = Color(0xFF3B82F6);
 
+  int _refreshKey = 0; // Key to force refresh stream
+
   void _showNotificationsDropdown() {
     showDialog(
       context: context,
@@ -41,40 +44,18 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  final List<AlertItem> alerts = [
-    AlertItem(
-      title: "High Water Level Alert",
-      body: "Water level reached 18.2m at Marikina River. Critical threshold exceeded. Automated systems active.",
-      priority: AlertPriority.high,
-      icon: Icons.warning_rounded,
-      location: "Marikina River - Tumana",
-      timestamp: DateTime.now(),
-    ),
-    AlertItem(
-      title: "Rising Water Level",
-      body: "Water level increasing at 0.3m/hour. Continue monitoring and move valuables to higher ground.",
-      priority: AlertPriority.medium,
-      icon: Icons.waves_rounded,
-      location: "Pasig River - C5 Area",
-      timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-    ),
-    AlertItem(
-      title: "Weather Advisory",
-      body: "Heavy rainfall expected in the next 6 hours. Monitor water levels closely for changes.",
-      priority: AlertPriority.info,
-      icon: Icons.cloud_queue_rounded,
-      location: "PAGASA Weather Bureau",
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    AlertItem(
-      title: "Water Level Stable",
-      body: "Manggahan Floodway levels stable at 6.5m. Normal operations confirmed.",
-      priority: AlertPriority.low,
-      icon: Icons.verified_rounded,
-      location: "Manggahan Floodway",
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-  ];
+  void _refreshAlerts() {
+    setState(() {
+      _refreshKey++;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Checking for new alerts...'),
+        duration: Duration(seconds: 1),
+        backgroundColor: brandBlue,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +71,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               _buildHeader(),
               const SizedBox(height: 12),
               const Text(
-                'Recent notifications and warnings',
+                'Recent announcements and warnings',
                 style: TextStyle(
                   fontSize: 15,
                   color: textSecondary,
@@ -98,8 +79,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              ...alerts.map((alert) => _buildAlertCard(alert)),
-              const SizedBox(height: 20),
+              _buildAnnouncementsList(),
             ],
           ),
         ),
@@ -121,9 +101,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () {
-              final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
-              if (mainScreen != null) {
-                mainScreen.navigateToHome();
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
+                if (mainScreen != null) {
+                  mainScreen.navigateToHome();
+                }
               }
             },
             color: textPrimary,
@@ -151,6 +135,22 @@ class _AlertsScreenState extends State<AlertsScreen> {
             ],
           ),
           child: IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _refreshAlerts,
+            color: textPrimary,
+            iconSize: 24,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: _showNotificationsDropdown,
             color: textPrimary,
@@ -161,8 +161,98 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Widget _buildAlertCard(AlertItem alert) {
-    final colors = _getPriorityTheme(alert.priority);
+  Widget _buildAnnouncementsList() {
+    return StreamBuilder<QuerySnapshot>(
+      key: ValueKey(_refreshKey),
+      stream: FirebaseFirestore.instance
+          .collection('announcements')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 40.0),
+              child: CircularProgressIndicator(color: brandBlue),
+            )
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading announcements'));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Column(
+                children: [
+                  Icon(Icons.inbox_rounded, size: 64, color: textSecondary),
+                  SizedBox(height: 16),
+                  Text('No announcements yet', style: TextStyle(color: textSecondary, fontSize: 16)),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final doc = snapshot.data!.docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+
+            // Map Firestore data to an internally usable object concept
+            final String title = data['title'] ?? 'Announcement';
+            final String message = data['message'] ?? '';
+            final String rawType = data['type'] ?? 'info';
+            final Timestamp? timestamp = data['timestamp'] as Timestamp?;
+            final DateTime dt = timestamp?.toDate() ?? DateTime.now();
+            final String sender = data['sender'] ?? 'Admin';
+
+            AlertPriority priority = AlertPriority.info;
+            IconData icon = Icons.info_outline_rounded;
+            
+            if (rawType.toLowerCase() == 'emergency' || rawType.toLowerCase() == 'danger') {
+              priority = AlertPriority.high;
+              icon = Icons.warning_rounded;
+            } else if (rawType.toLowerCase() == 'alert' || rawType.toLowerCase() == 'warning') {
+              priority = AlertPriority.medium;
+              icon = Icons.waves_rounded;
+            } else if (rawType.toLowerCase() == 'low' || rawType.toLowerCase() == 'success') {
+              priority = AlertPriority.low;
+              icon = Icons.verified_rounded;
+            } else {
+              priority = AlertPriority.info;
+              icon = Icons.campaign_rounded;
+            }
+
+            return _buildAlertCard(
+              title: title,
+              body: message,
+              priority: priority,
+              icon: icon,
+              location: sender, 
+              timestamp: dt,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAlertCard({
+    required String title,
+    required String body,
+    required AlertPriority priority,
+    required IconData icon,
+    required String location,
+    required DateTime timestamp,
+  }) {
+    final colors = _getPriorityTheme(priority);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -205,7 +295,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
-                              alert.icon,
+                              icon,
                               color: colors['primary'],
                               size: 24,
                             ),
@@ -221,7 +311,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        alert.title,
+                                        title,
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -237,7 +327,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        alert.priority.name.toUpperCase(),
+                                        priority.name.toUpperCase(),
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
@@ -250,7 +340,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  alert.body,
+                                  body,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: textSecondary,
@@ -273,17 +363,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
                             const Icon(Icons.access_time_rounded, size: 14, color: textSecondary),
                             const SizedBox(width: 6),
                             Text(
-                              _getTimeAgo(alert.timestamp),
+                              _getTimeAgo(timestamp),
                               style: const TextStyle(fontSize: 12, color: textSecondary, fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(width: 12),
                             Container(width: 4, height: 4, decoration: const BoxDecoration(shape: BoxShape.circle, color: textSecondary)),
                             const SizedBox(width: 12),
-                            const Icon(Icons.location_on_outlined, size: 14, color: textSecondary),
+                            const Icon(Icons.person_pin, size: 14, color: textSecondary),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                alert.location,
+                                location,
                                 style: const TextStyle(fontSize: 12, color: textSecondary, fontWeight: FontWeight.w500),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -342,31 +432,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return '\m ago';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return '\h ago';
     } else {
-      return '${difference.inDays}d ago';
+      return '\d ago';
     }
   }
 }
 
 enum AlertPriority { high, medium, info, low }
-
-class AlertItem {
-  final String title;
-  final String body;
-  final AlertPriority priority;
-  final IconData icon;
-  final String location;
-  final DateTime timestamp;
-
-  AlertItem({
-    required this.title,
-    required this.body,
-    required this.priority,
-    required this.icon,
-    required this.location,
-    required this.timestamp,
-  });
-}

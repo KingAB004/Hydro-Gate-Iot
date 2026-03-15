@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
+import '../services/weather_service.dart';
+import '../models/weather_models.dart';
+import '../utils/weather_utils.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,6 +42,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   late Animation<double> _pulseAnimation;
   bool _isButtonDown = false;
 
+  final WeatherService _weatherService = WeatherService();
+  WeatherForecast? _weatherForecast;
+  bool _isLoadingWeather = true;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +59,26 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
 
     _loadUserData();
+    _fetchWeatherData();
+  }
+
+  Future<void> _fetchWeatherData() async {
+    try {
+      final forecast = await _weatherService.getCompleteWeather('Philippines');
+      if (mounted) {
+        setState(() {
+          _weatherForecast = forecast;
+          _isLoadingWeather = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching weather data: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingWeather = false;
+        });
+      }
+    }
   }
 
   @override
@@ -129,6 +157,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
+              _buildCurrentStatusMessage(),
+              const SizedBox(height: 20),
               _buildEmergencyFloodgateControl(),
               const SizedBox(height: 20),
               _buildWaterLevelMonitorCard(),
@@ -138,6 +168,80 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentStatusMessage() {
+    final double waterLevelM = waterHeightCm / 100;
+    
+    Color bgColor;
+    Color iconColor;
+    IconData icon;
+    String title;
+    String message;
+
+    if (waterLevelM >= 18) {
+      // DANGER LEVEL
+      bgColor = dangerRed.withOpacity(0.1);
+      iconColor = dangerRed;
+      icon = Icons.warning_rounded;
+      title = 'DANGER: CRITICAL WATER LEVEL';
+      message = 'Water levels exceed 18m. Immediate action and evacuation protocols may be required.';
+    } else if (waterLevelM >= 15) {
+      // WARNING LEVEL
+      bgColor = warningOrange.withOpacity(0.1);
+      iconColor = warningOrange;
+      icon = Icons.report_problem_rounded;
+      title = 'WARNING: ELEVATED WATER LEVEL';
+      message = 'Water levels are between 15m and 18m. Please monitor the situation closely.';
+    } else {
+      // NORMAL LEVEL
+      bgColor = successGreen.withOpacity(0.1);
+      iconColor = successGreen;
+      icon = Icons.check_circle_outline_rounded;
+      title = 'STATUS: NORMAL';
+      message = 'Water levels are stable below 15m. No immediate action required.';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: iconColor.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: textPrimary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -548,6 +652,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildRainfallInfoCard() {
+    String value = '0';
+    String unit = 'mm/hr';
+    String condition = 'Loading...';
+    IconData icon = Icons.cloud_outlined;
+
+    if (!_isLoadingWeather && _weatherForecast != null) {
+      final current = _weatherForecast!.currentWeather;
+      final rainfallText = WeatherUtils.getRainfallInfo(current.description, current.main);
+      final parts = rainfallText.split(' ');
+      value = parts.isNotEmpty ? parts[0] : '0';
+      unit = parts.length > 1 ? parts.sublist(1).join(' ') : 'mm/hr';
+      condition = WeatherUtils.capitalizeDescription(current.description);
+      icon = WeatherUtils.getWeatherIcon(current.icon, current.main);
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
@@ -569,29 +688,40 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.water_drop_rounded, color: brandBlue, size: 24),
+                child: Icon(icon, color: brandBlue, size: 24),
               ),
               const SizedBox(width: 16),
               const Text(
-                'Rainfall Analytics',
+                'Local Weather & Rainfall',
                 style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
               ),
+              if (_isLoadingWeather)
+                const Padding(
+                  padding: EdgeInsets.only(left: 12.0),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(color: brandBlue, strokeWidth: 2),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 24),
           Row(
             children: [
-              const Text(
-                '12',
-                style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('mm/hr', style: TextStyle(fontSize: 16, color: brandBlue, fontWeight: FontWeight.w600)),
-                  Text('Moderate Rain', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7))),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(unit, style: const TextStyle(fontSize: 16, color: brandBlue, fontWeight: FontWeight.w600)),
+                    Text(condition, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7))),
+                  ],
+                ),
               ),
             ],
           ),
@@ -634,7 +764,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 _buildDrawerItem(icon: Icons.person_outline_rounded, title: 'Profile', onTap: () => Navigator.pop(context)),
-                _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () => Navigator.pop(context)),
+                _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {
+                  Navigator.pop(context); // close drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
+                }),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Divider(),

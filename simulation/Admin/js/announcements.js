@@ -1,52 +1,43 @@
-// ===== Announcements & Messages =====
-let announcements = [
-    {
-        id: 1,
-        title: 'High Water Alert',
-        message: 'Water level has exceeded 70%. Residents in flood-prone areas are advised to take precautions.',
-        type: 'Alert',
-        audience: ['Admin', 'LGU', 'Homeowner'],
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleString(),
-        status: 'Sent'
-    },
-    {
-        id: 2,
-        title: 'System Maintenance Scheduled',
-        message: 'Scheduled maintenance will occur on March 10, 2026 from 2:00 AM to 4:00 AM. System will be temporarily unavailable.',
-        type: 'Info',
-        audience: ['Admin', 'LGU'],
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toLocaleString(),
-        status: 'Sent'
-    },
-    {
-        id: 3,
-        title: 'Flood Warning - URGENT',
-        message: 'EMERGENCY ALERT: Severe flooding expected in the next 2-3 hours. Evacuate areas as instructed by local authorities.',
-        type: 'Emergency',
-        audience: ['Admin', 'LGU', 'Homeowner'],
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toLocaleString(),
-        status: 'Sent'
-    },
-    {
-        id: 4,
-        title: 'Temperature Warning',
-        message: 'Unusually high water temperature detected. This may indicate different water sources or system anomalies.',
-        type: 'Warning',
-        audience: ['Admin', 'LGU'],
-        timestamp: new Date(Date.now() - 30 * 60 * 1000).toLocaleString(),
-        status: 'Sent'
-    }
-];
+// ===== Announcements & Messages (Firebase Integrated) =====
 
-let nextAnnouncementId = 5;
+let announcements = [];
 
-// Init Announcements
-function initAnnouncements() {
-    renderAnnouncements();
+// Initialize Announcements
+window.initAnnouncements = async function() {
     attachAnnouncementEventListeners();
+    await fetchAnnouncements();
+};
+
+// Fetch Announcements from Firestore
+async function fetchAnnouncements() {
+    const firestoreDb = window.firestoreDb;
+    try {
+        const snapshot = await firestoreDb.collection('announcements').orderBy('timestamp', 'desc').get();
+        announcements = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            announcements.push({
+                id: doc.id,
+                title: data.title || 'No Title',
+                message: data.message || '',
+                type: data.type || 'Info',
+                audience: data.audience || [],
+                timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
+                status: data.status || 'Sent',
+                sender: data.sender || 'Admin'
+            });
+        });
+        renderAnnouncements();
+        
+        // Try to update stats on overview if function exists
+        if (typeof updateStats === 'function') {
+            updateStats();
+        }
+    } catch (e) {
+        console.error("Error fetching announcements:", e);
+    }
 }
 
-// Attach event listeners
 function attachAnnouncementEventListeners() {
     const newAnnouncementBtn = document.getElementById('new-announcement-btn');
     const announcementForm = document.getElementById('announcement-form');
@@ -57,6 +48,7 @@ function attachAnnouncementEventListeners() {
     if (newAnnouncementBtn) newAnnouncementBtn.addEventListener('click', toggleAnnouncementForm);
     if (announcementForm) announcementForm.addEventListener('submit', handleAnnouncementSubmit);
     if (cancelAnnouncementBtn) cancelAnnouncementBtn.addEventListener('click', toggleAnnouncementForm);
+    
     if (scheduleCheckbox) {
         scheduleCheckbox.addEventListener('change', () => {
             if (scheduleTimeInput) {
@@ -66,26 +58,26 @@ function attachAnnouncementEventListeners() {
     }
 }
 
-// Toggle Announcement Form
 function toggleAnnouncementForm() {
     const formContainer = document.getElementById('announcement-form-container');
-    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-
-    if (formContainer.style.display === 'block') {
-        document.getElementById('announcement-form').reset();
+    if (formContainer) {
+        formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
+        if (formContainer.style.display === 'block') {
+            document.getElementById('announcement-form').reset();
+            const scheduleTimeInput = document.getElementById('schedule-time');
+            if (scheduleTimeInput) scheduleTimeInput.style.display = 'none';
+        }
     }
 }
 
-// Handle Announcement Submit
-function handleAnnouncementSubmit(e) {
+async function handleAnnouncementSubmit(e) {
     e.preventDefault();
 
     const title = document.getElementById('announcement-title').value;
     const message = document.getElementById('announcement-message').value;
     const type = document.getElementById('announcement-type').value;
-    const schedule = document.getElementById('schedule-announcement').checked;
-    const scheduleTime = document.getElementById('schedule-time').value;
-
+    const schedule = document.getElementById('schedule-announcement')?.checked;
+    
     // Get audience
     const audienceCheckboxes = document.querySelectorAll('#announcement-form .checkbox-group input');
     const audience = [];
@@ -95,30 +87,39 @@ function handleAnnouncementSubmit(e) {
         }
     });
 
-    // Create announcement
-    const newAnnouncement = {
-        id: nextAnnouncementId++,
-        title,
-        message,
-        type,
-        audience,
-        timestamp: schedule ? new Date(scheduleTime).toLocaleString() : new Date().toLocaleString(),
-        status: schedule ? 'Scheduled' : 'Sent'
+    const newAnnouncementData = {
+        title: title,
+        message: message,
+        type: type,
+        audience: audience,
+        timestamp: new Date(),  // Using standard JS Date which Firestore automatically converts to a Timestamp
+        status: schedule ? 'Scheduled' : 'Sent',
+        sender: 'Admin'
     };
 
-    announcements.unshift(newAnnouncement);
-
-    // Clear form and hide
-    toggleAnnouncementForm();
-    renderAnnouncements();
-    updateStats();
-
-    alert(`Announcement ${schedule ? 'scheduled' : 'sent'} successfully!`);
+    try {
+        console.log("Submitting announcement: ", newAnnouncementData);
+        if (!firebase.firestore.FieldValue) {
+            console.error("Firebase FieldValue is missing!");
+        }
+        
+        const firestoreDb = window.firestoreDb;
+        const docRef = await firestoreDb.collection('announcements').add(newAnnouncementData);
+        console.log("Announcement added with ID: ", docRef.id);
+        
+        alert(`Announcement ${schedule ? 'scheduled' : 'sent'} successfully!`);
+        toggleAnnouncementForm();
+        await fetchAnnouncements(); // Refresh list automatically
+    } catch (error) {
+        console.error("Error adding announcement: ", error);
+        alert("Failed to send announcement.");
+    }
 }
 
-// Render Announcements
 function renderAnnouncements() {
     const container = document.getElementById('announcements-list');
+    if (!container) return;
+    
     container.innerHTML = '';
 
     if (announcements.length === 0) {
@@ -128,77 +129,47 @@ function renderAnnouncements() {
 
     announcements.forEach(announcement => {
         const card = document.createElement('div');
-        card.className = `announcement-card ${announcement.type.toLowerCase()}`;
+        card.className = 'card announcement-card';
         
-        const typeColors = {
-            'Info': 'badge-info info',
-            'Alert': 'badge-info alert',
-            'Warning': 'badge-info warning',
-            'Emergency': 'badge-info emergency'
-        };
+        let typeClass = '';
+        switch(announcement.type.toLowerCase()) {
+            case 'emergency': 
+            case 'danger': typeClass = 'badge-danger'; break;
+            case 'warning': typeClass = 'badge-warning'; break;
+            case 'info': typeClass = 'badge-success'; break;
+            default: typeClass = 'badge-success';
+        }
+
+        const dateStr = announcement.timestamp instanceof Date 
+            ? announcement.timestamp.toLocaleString() 
+            : new Date(announcement.timestamp).toLocaleString();
+
+        const badgeHtml = announcement.status === 'Sent' ? '<span class="status-badge success">Sent</span>' : '<span class="status-badge warning">Scheduled</span>';
+
+        let tagsHtml = '';
+        announcement.audience.forEach(a => {
+            tagsHtml += `<span class="tag">${a}</span>`;
+        });
 
         card.innerHTML = `
             <div class="announcement-header">
-                <div>
-                    <h4 class="announcement-title">${announcement.title}</h4>
-                    <div class="announcement-meta">
-                        <span class="badge-info ${typeColors[announcement.type]}"> ${announcement.type}</span>
-                        <span class="badge-info">${announcement.status}</span>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h4>${announcement.title}</h4>
+                    <span class="${typeClass}">${announcement.type}</span>
                 </div>
+                ${badgeHtml}
             </div>
             <p class="announcement-message">${announcement.message}</p>
-            <div class="announcement-meta">
-                <span class="announcement-time">📅 ${announcement.timestamp}</span>
-                <span class="announcement-audience">👥 ${announcement.audience.join(', ')}</span>
-            </div>
-            <div class="announcement-actions">
-                <button class="btn-edit-announcement" onclick="editAnnouncement(${announcement.id})">Edit</button>
-                <button class="btn-delete-announcement" onclick="deleteAnnouncement(${announcement.id})">Delete</button>
+            <div class="announcement-footer">
+                <div class="audience-tags">
+                    ${tagsHtml}
+                </div>
+                <div class="announcement-meta">
+                    <span>Sent by: ${announcement.sender}</span>
+                    <span>${dateStr}</span>
+                </div>
             </div>
         `;
-
         container.appendChild(card);
     });
 }
-
-// Edit Announcement
-function editAnnouncement(id) {
-    const announcement = announcements.find(a => a.id === id);
-    if (!announcement) return;
-
-    // Populate form
-    document.getElementById('announcement-title').value = announcement.title;
-    document.getElementById('announcement-message').value = announcement.message;
-    document.getElementById('announcement-type').value = announcement.type;
-
-    // Set audience
-    const audienceCheckboxes = document.querySelectorAll('#announcement-form .checkbox-group input');
-    audienceCheckboxes.forEach(checkbox => {
-        checkbox.checked = announcement.audience.includes(checkbox.value);
-    });
-
-    // Show form
-    document.getElementById('announcement-form-container').style.display = 'block';
-
-    // Store ID for update
-    document.getElementById('announcement-form').dataset.editId = id;
-}
-
-// Delete Announcement
-function deleteAnnouncement(id) {
-    if (confirm('Are you sure you want to delete this announcement?')) {
-        announcements = announcements.filter(a => a.id !== id);
-        renderAnnouncements();
-        updateStats();
-    }
-}
-
-// Update announcement stats
-function updatePendingMessages() {
-    const pending = announcements.filter(a => a.status === 'Scheduled').length;
-    document.getElementById('pending-messages').textContent = pending;
-}
-
-// Export functions for access from other files
-window.announcements = announcements;

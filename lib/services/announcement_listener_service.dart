@@ -1,6 +1,7 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Firestore Listener Service - Monitors announcements in real-time
@@ -12,7 +13,7 @@ class AnnouncementListenerService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+
   StreamSubscription<QuerySnapshot>? _announcementSubscription;
   String? _lastAnnouncementId;
   bool _isInitialized = false;
@@ -31,7 +32,7 @@ class AnnouncementListenerService {
     _startListening();
 
     _isInitialized = true;
-    print('✅ Announcement Listener Service initialized');
+    print('Announcement Listener Service initialized');
   }
 
   /// Initialize local notifications plugin
@@ -54,55 +55,9 @@ class AnnouncementListenerService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
-
-    // Create notification channels for Android
-    await _createNotificationChannels();
   }
 
-  /// Create notification channels for different announcement types
-  Future<void> _createNotificationChannels() async {
-    // Emergency channel (red, high priority)
-    const AndroidNotificationChannel emergencyChannel = AndroidNotificationChannel(
-      'emergency_alerts',
-      'Emergency Alerts',
-      description: 'Critical emergency announcements from LGU',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-      vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
-      showBadge: true,
-    );
-
-    // Warning channel (orange, high priority)
-    const AndroidNotificationChannel warningChannel = AndroidNotificationChannel(
-      'warning_alerts',
-      'Warning Alerts',
-      description: 'Important warnings from LGU',
-      importance: Importance.high,
-      playSound: true,
-      enableVibration: true,
-      showBadge: true,
-    );
-
-    // Info channel (blue, normal priority)
-    const AndroidNotificationChannel infoChannel = AndroidNotificationChannel(
-      'info_alerts',
-      'Information',
-      description: 'General information from LGU',
-      importance: Importance.defaultImportance,
-      playSound: true,
-      showBadge: true,
-    );
-
-    final plugin = _localNotifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-
-    await plugin?.createNotificationChannel(emergencyChannel);
-    await plugin?.createNotificationChannel(warningChannel);
-    await plugin?.createNotificationChannel(infoChannel);
-  }
-
-  /// Get the latest announcement ID to prevent showing old notifications
+  /// Get the ID of the latest announcement to use as baseline
   Future<void> _getLatestAnnouncementId() async {
     try {
       final snapshot = await _firestore
@@ -113,24 +68,22 @@ class AnnouncementListenerService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastAnnouncementId = snapshot.docs.first.id;
-        print('Latest announcement ID: $_lastAnnouncementId');
+        print('Baseline announcement ID set: \');
       }
     } catch (e) {
-      print('Error getting latest announcement: $e');
+      print('Error getting baseline announcement: \');
     }
   }
 
-  /// Start listening for new announcements from Firestore
+  /// Start listening to Firestore for new announcements
   void _startListening() {
-    print('🎧 Started listening for announcements...');
-
     _announcementSubscription = _firestore
         .collection('announcements')
         .orderBy('timestamp', descending: true)
         .limit(1)
         .snapshots()
         .listen(
-          (snapshot) {
+          (snapshot) async {
             if (snapshot.docs.isEmpty) return;
 
             final doc = snapshot.docs.first;
@@ -147,22 +100,47 @@ class AnnouncementListenerService {
             }
 
             // New announcement detected!
-            print('🔔 NEW ANNOUNCEMENT DETECTED!');
             _lastAnnouncementId = announcementId;
+
+            // 1. Check if the user has push notifications enabled in Firestore
+            bool hasNotificationsEnabled = await _checkIfPushNotificationsEnabled();
+            if (!hasNotificationsEnabled) {
+               print('Notifications are disabled by user, skipping local notification.');
+               return; 
+            }
 
             // Get announcement data
             final data = doc.data() as Map<String, dynamic>;
             final String type = data['type'] ?? 'info';
             final String message = data['message'] ?? '';
             final String sender = data['sender'] ?? 'LGU';
+            final String title = data['title'] ?? 'New Notification';
 
             // Show local notification
-            _showLocalNotification(type, message, sender, announcementId);
+            _showLocalNotification(type, message, sender, announcementId, title);
           },
           onError: (error) {
-            print('Error listening to announcements: $error');
+            print('Error listening to announcements: \The term 'head' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'grep' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'Y' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'.');
           },
         );
+  }
+
+  /// Check User Preferences for Notifications
+  Future<bool> _checkIfPushNotificationsEnabled() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        // Return whatever is set for pushNotificationsEnabled. Default is false if it doesn't exist
+        return doc.data()?['pushNotificationsEnabled'] ?? false;
+      }
+      return false; // Document doesn't exist, assume false
+    } catch (e) {
+      print('Error reading user preference: \');
+      return false; // Error reading, assume false
+    }
   }
 
   /// Show local notification for new announcement
@@ -171,10 +149,11 @@ class AnnouncementListenerService {
     String message,
     String sender,
     String announcementId,
+    String title
   ) async {
-    print('📱 Showing notification: $type - $message');
+    print('Showing notification: \ - \');
 
-    final config = _getNotificationConfig(type);
+    final config = _getNotificationConfig(type, title);
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       config['channelId'] as String,
@@ -213,15 +192,16 @@ class AnnouncementListenerService {
       payload: announcementId,
     );
 
-    print('✅ Notification shown successfully');
+    print('Notification shown successfully');
   }
 
   /// Get notification configuration based on type
-  Map<String, dynamic> _getNotificationConfig(String type) {
-    switch (type) {
+  Map<String, dynamic> _getNotificationConfig(String type, String title) {
+    switch (type.toLowerCase()) {
+      case 'emergency':
       case 'danger':
         return {
-          'title': '🚨 EMERGENCY ALERT',
+          'title': '🚨 \',
           'channelId': 'emergency_alerts',
           'channelName': 'Emergency Alerts',
           'importance': Importance.max,
@@ -229,8 +209,9 @@ class AnnouncementListenerService {
           'color': const Color(0xFFEF4444), // Red
         };
       case 'warning':
+      case 'alert':
         return {
-          'title': '⚠️ Warning Alert',
+          'title': '⚠️ \',
           'channelId': 'warning_alerts',
           'channelName': 'Warning Alerts',
           'importance': Importance.high,
@@ -240,7 +221,7 @@ class AnnouncementListenerService {
       case 'info':
       default:
         return {
-          'title': 'ℹ️ LGU Announcement',
+          'title': 'ℹ️ \',
           'channelId': 'info_alerts',
           'channelName': 'Information',
           'importance': Importance.defaultImportance,
@@ -252,27 +233,13 @@ class AnnouncementListenerService {
 
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
-    print('Notification tapped: ${response.payload}');
-    
-    // TODO: Navigate to announcements screen
-    // You can use a global navigator key or event bus here
-    // Example: navigatorKey.currentState?.pushNamed('/announcements');
+    print('Notification tapped: \');
   }
 
   /// Stop listening for announcements
   void dispose() {
     _announcementSubscription?.cancel();
     _isInitialized = false;
-    print('❌ Announcement Listener Service disposed');
-  }
-
-  /// Manually trigger a test notification (for testing)
-  Future<void> testNotification() async {
-    await _showLocalNotification(
-      'info',
-      'This is a test notification to verify the system is working.',
-      'System',
-      'test_${DateTime.now().millisecondsSinceEpoch}',
-    );
+    print('Announcement Listener Service disposed');
   }
 }

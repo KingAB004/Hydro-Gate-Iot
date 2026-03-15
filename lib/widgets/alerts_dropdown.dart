@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/alerts_screen.dart';
 
 class AlertsDropdown extends StatelessWidget {
@@ -17,33 +18,6 @@ class AlertsDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<AlertItem> recentAlerts = [
-      AlertItem(
-        title: "High Water Level Alert",
-        body: "",
-        priority: AlertPriority.high,
-        icon: Icons.warning_rounded,
-        location: "Marikina River",
-        timestamp: DateTime.now(),
-      ),
-      AlertItem(
-        title: "Rising Water Level",
-        body: "",
-        priority: AlertPriority.medium,
-        icon: Icons.waves_rounded,
-        location: "Pasig River",
-        timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-      ),
-      AlertItem(
-        title: "Weather Advisory",
-        body: "",
-        priority: AlertPriority.info,
-        icon: Icons.info_outline_rounded,
-        location: "PAGASA",
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      ),
-    ];
-
     return Container(
       width: 320,
       constraints: const BoxConstraints(maxHeight: 400),
@@ -100,26 +74,61 @@ class AlertsDropdown extends StatelessWidget {
               ],
             ),
           ),
-          // Alerts List
+          // Alerts List via Stream
           Flexible(
-            child: recentAlerts.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: recentAlerts.length,
-                    itemBuilder: (context, index) {
-                      return _buildAlertItem(context, recentAlerts[index]);
-                    },
-                  ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('announcements')
+                  .orderBy('timestamp', descending: true)
+                  .limit(5)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final String title = data['title'] ?? 'Announcement';
+                    final String rawType = data['type'] ?? 'info';
+                    final Timestamp? timestamp = data['timestamp'] as Timestamp?;
+                    final DateTime dt = timestamp?.toDate() ?? DateTime.now();
+
+                    AlertPriority priority = AlertPriority.info;
+                    if (rawType.toLowerCase() == 'emergency' || rawType.toLowerCase() == 'danger') {
+                      priority = AlertPriority.high;
+                    } else if (rawType.toLowerCase() == 'alert' || rawType.toLowerCase() == 'warning') {
+                      priority = AlertPriority.medium;
+                    } else if (rawType.toLowerCase() == 'low' || rawType.toLowerCase() == 'success') {
+                      priority = AlertPriority.low;
+                    }
+
+                    return _buildAlertItem(context, title, priority, dt);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAlertItem(BuildContext context, AlertItem alert) {
-    final tagColor = _getPriorityColor(alert.priority);
+  Widget _buildAlertItem(BuildContext context, String title, AlertPriority priority, DateTime timestamp) {
+    final tagColor = _getPriorityColor(priority);
 
     return InkWell(
       onTap: () {
@@ -152,7 +161,7 @@ class AlertsDropdown extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    alert.title,
+                    title,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -163,7 +172,7 @@ class AlertsDropdown extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _getTimeAgo(alert.timestamp),
+                    _getTimeAgo(timestamp),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF64748B),
@@ -223,11 +232,11 @@ class AlertsDropdown extends StatelessWidget {
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return '\m ago';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return '\h ago';
     } else {
-      return '${difference.inDays}d ago';
+      return '\d ago';
     }
   }
 }

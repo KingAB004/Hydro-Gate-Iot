@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AFWMS Admin Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -91,8 +93,20 @@
                         </div>
                     </div>
                     <div class="recent-activity">
-                        <h3>System Status</h3>
-                        <div class="status-box">
+                        <h3>System Analytics & Status</h3>
+                        <div class="analytics-container" style="margin-top: 20px; background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h4 style="font-weight: 500; font-size: 16px;">Water Level Trends</h4>
+                                <select id="chart-timeframe" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; outline: none; cursor: pointer;">
+                                    <option value="today">Today</option>
+                                    <option value="weekly">This Week</option>
+                                </select>
+                            </div>
+                            <div style="height: 300px; width: 100%;">
+                                <canvas id="waterLevelChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="status-box" style="margin-top: 20px;">
                             <p><strong>Hydrograte Status:</strong> <span id="status-hydrograte" class="badge-success">Online</span></p>
                             <p><strong>Last Updated:</strong> <span id="status-updated">--</span></p>
                             <p><strong>System Health:</strong> <span id="status-health" class="badge-success">Healthy</span></p>
