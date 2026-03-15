@@ -2,30 +2,99 @@
 
 let users = [];
 let filteredUsers = [];
+let usersUnsubscribe = null;
+let hasShownPermissionWarning = false;
 window.users = users;
+
+function normalizeRole(role) {
+    const value = (role || '').toString().trim().toLowerCase();
+    if (value === 'admin') return 'Admin';
+    if (value === 'lgu') return 'LGU';
+    if (value === 'homeowner') return 'Homeowner';
+    return 'Homeowner';
+}
+
+function normalizeStatus(status) {
+    const value = (status || '').toString().trim().toLowerCase();
+    return value === 'inactive' ? 'Inactive' : 'Active';
+}
+
+function normalizeUserDoc(id, data) {
+    const username = (data.username || data.name || '').toString().trim();
+    const email = (data.email || '').toString().trim();
+    const phone = (data.phone || '').toString().trim();
+
+    return {
+        id: id,
+        username: username || (email ? email.split('@')[0] : 'Unknown User'),
+        email: email || 'N/A',
+        phone: phone,
+        role: normalizeRole(data.role),
+        status: normalizeStatus(data.status),
+        joined: data.joined || 'N/A',
+        pushNotificationsEnabled: Boolean(data.pushNotificationsEnabled),
+        smsNotificationsEnabled: Boolean(data.smsNotificationsEnabled)
+    };
+}
 
 // Init Users Management
 window.initUsersManagement = async function() {
     attachUserEventListeners();
     await fetchUsers();
+    subscribeUsersRealtime();
 };
 
 async function fetchUsers() {
     const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) {
+        console.error('Firestore is not initialized.');
+        return;
+    }
+
     try {
         const snapshot = await firestoreDb.collection('users').get();
-        users = [];
-        snapshot.forEach(doc => {
-            users.push({ id: doc.id, ...doc.data() });
-        });
-        window.users = users;
-        filteredUsers = [...users];
-        renderUsersTable();
-        if (typeof window.updateStats === 'function') {
-            window.updateStats();
-        }
+        applyUsersSnapshot(snapshot);
     } catch (e) {
         console.error("Error fetching users: ", e);
+        handleUsersPermissionError(e);
+    }
+}
+
+function subscribeUsersRealtime() {
+    const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) return;
+
+    if (typeof usersUnsubscribe === 'function') {
+        usersUnsubscribe();
+    }
+
+    usersUnsubscribe = firestoreDb.collection('users').onSnapshot(function(snapshot) {
+        applyUsersSnapshot(snapshot);
+    }, function(error) {
+        console.error('Realtime users listener failed:', error);
+        handleUsersPermissionError(error);
+    });
+}
+
+function applyUsersSnapshot(snapshot) {
+    users = [];
+    snapshot.forEach(function(doc) {
+        users.push(normalizeUserDoc(doc.id, doc.data() || {}));
+    });
+    window.users = users;
+    filteredUsers = [...users];
+    renderUsersTable();
+    if (typeof window.updateStats === 'function') {
+        window.updateStats();
+    }
+}
+
+function handleUsersPermissionError(error) {
+    if (!error || !error.code) return;
+    const isPermissionError = error.code === 'permission-denied' || error.code === 'PERMISSION_DENIED';
+    if (isPermissionError && !hasShownPermissionWarning) {
+        hasShownPermissionWarning = true;
+        alert('Firestore permission denied for users collection. Check Firestore rules/auth for /users.');
     }
 }
 
@@ -75,13 +144,17 @@ async function handleUserFormSubmit(e) {
     e.preventDefault();
 
     const userId = document.getElementById('user-id').value;
-    const username = document.getElementById('username').value;
-    const email = document.getElementById('email').value;
-    const role = document.getElementById('role').value;
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const role = normalizeRole(document.getElementById('role').value);
     const password = document.getElementById('password').value;
-    const status = document.getElementById('status').value;
+    const status = normalizeStatus(document.getElementById('status').value);
 
     const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) {
+        alert('Firestore is not initialized. Please reload the page.');
+        return;
+    }
 
     if (userId) {
         // Update existing user
@@ -91,11 +164,13 @@ async function handleUserFormSubmit(e) {
                 username,
                 email,
                 role,
-                status
+                status,
+                updatedAt: new Date().toISOString()
             });
             alert('User updated successfully!');
         } catch (error) {
             console.error("Error updating user: ", error);
+            handleUsersPermissionError(error);
             alert('Error updating user: ' + error.message);
         }
     } else {
@@ -113,7 +188,11 @@ async function handleUserFormSubmit(e) {
                 email,
                 role,
                 status,
-                joined: new Date().toISOString().split('T')[0]
+                joined: new Date().toISOString().split('T')[0],
+                phone: '',
+                pushNotificationsEnabled: true,
+                smsNotificationsEnabled: true,
+                updatedAt: new Date().toISOString()
             });
             
             // Sign out the secondary app instance
@@ -122,12 +201,16 @@ async function handleUserFormSubmit(e) {
             alert('User created successfully!');
         } catch (error) {
             console.error("Error creating user: ", error);
+            handleUsersPermissionError(error);
             alert('Error creating user: ' + error.message);
             return;
         }
     }
 
-    await fetchUsers(); // Re-fetch the user list
+    // Listener will auto-refresh list, fetch is fallback if listener is not active.
+    if (typeof usersUnsubscribe !== 'function') {
+        await fetchUsers();
+    }
     closeUserModal();
 }
 
@@ -138,8 +221,10 @@ function filterUsers() {
     const statusFilter = document.getElementById('status-filter').value;
 
     filteredUsers = users.filter(user => {
-        const matchesSearch = user.username.toLowerCase().includes(searchTerm) || 
-                            user.email.toLowerCase().includes(searchTerm);
+        const username = (user.username || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+        const phone = (user.phone || '').toLowerCase();
+        const matchesSearch = username.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm);
         const matchesRole = !roleFilter || user.role === roleFilter;
         const matchesStatus = !statusFilter || user.status === statusFilter;
 
@@ -211,9 +296,12 @@ window.deleteUser = async function(id) {
         const firestoreDb = window.firestoreDb;
         try {
             await firestoreDb.collection('users').doc(id).delete();
-            await fetchUsers(); // Refresh list
+            if (typeof usersUnsubscribe !== 'function') {
+                await fetchUsers(); // Refresh list fallback
+            }
         } catch(error) {
             console.error("Error deleting user: ", error);
+            handleUsersPermissionError(error);
             alert("Error deleting user: " + error.message);
         }
     }

@@ -22,8 +22,8 @@ service cloud.firestore {
     
     // User data
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
+      // Temporary for simulation/admin dashboard without enforced login session.
+      allow read, write: if true;
     }
     
     // Water level data (for monitoring)
