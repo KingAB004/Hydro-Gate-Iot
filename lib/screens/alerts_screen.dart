@@ -57,6 +57,87 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
+  Future<void> _deleteAllAlerts() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Delete all alerts?',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Icon(Icons.warning_amber_rounded, color: dangerRed),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'This will permanently remove all alerts. You cannot undo this action.',
+                  style: TextStyle(color: textSecondary),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text(
+                'Proceed',
+                style: TextStyle(color: dangerRed, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final query = await FirebaseFirestore.instance.collection('announcements').get();
+      if (query.docs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No alerts to delete'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        return;
+      }
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in query.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All alerts deleted'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete alerts'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,6 +232,22 @@ class _AlertsScreenState extends State<AlertsScreen> {
             ],
           ),
           child: IconButton(
+            icon: const Icon(Icons.delete_sweep_rounded),
+            onPressed: _deleteAllAlerts,
+            color: dangerRed,
+            iconSize: 24,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: _showNotificationsDropdown,
             color: textPrimary,
@@ -230,13 +327,63 @@ class _AlertsScreenState extends State<AlertsScreen> {
               icon = Icons.campaign_rounded;
             }
 
-            return _buildAlertCard(
-              title: title,
-              body: message,
-              priority: priority,
-              icon: icon,
-              location: sender, 
-              timestamp: dt,
+            return Dismissible(
+              key: ValueKey(doc.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: dangerRed,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              confirmDismiss: (direction) async {
+                return await showDialog<bool>(
+                  context: context,
+                  builder: (dialogContext) {
+                    return AlertDialog(
+                      title: const Text('Delete alert?'),
+                      content: const Text('This action cannot be undone.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    );
+                  },
+                ) ?? false;
+              },
+              onDismissed: (_) async {
+                await doc.reference.delete();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Alert deleted'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
+              },
+              child: _buildAlertCard(
+                title: title,
+                body: message,
+                priority: priority,
+                icon: icon,
+                location: sender, 
+                timestamp: dt,
+              ),
             );
           },
         );
