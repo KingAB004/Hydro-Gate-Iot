@@ -4,9 +4,12 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
 import '../services/weather_service.dart';
+import '../services/auth_service.dart';
 import '../models/weather_models.dart';
 import '../utils/weather_utils.dart';
 import 'settings_screen.dart';
+import 'profile_screen.dart';
+import 'welcome_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -763,7 +766,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _buildDrawerItem(icon: Icons.person_outline_rounded, title: 'Profile', onTap: () => Navigator.pop(context)),
+                _buildDrawerItem(icon: Icons.person_outline_rounded, title: 'Profile', onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  );
+                }),
                 _buildDrawerItem(icon: Icons.settings_outlined, title: 'Settings', onTap: () {
                   Navigator.pop(context); // close drawer
                   Navigator.push(
@@ -775,7 +784,17 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Divider(),
                 ),
-                _buildDrawerItem(icon: Icons.logout_rounded, title: 'Logout', onTap: () => Navigator.pop(context), isDestructive: true),
+                _buildDrawerItem(icon: Icons.logout_rounded, title: 'Logout', onTap: () async {
+                  Navigator.pop(context);
+                  await AuthService().signOut();
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                      (route) => false,
+                    );
+                  }
+                }, isDestructive: true),
               ],
             ),
           ),
