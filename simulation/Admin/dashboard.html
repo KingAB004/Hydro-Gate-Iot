@@ -29,6 +29,9 @@
                 <button class="nav-btn" data-tab="announcements">
                     <span class="icon">📢</span> Announcements
                 </button>
+                <button class="nav-btn" data-tab="audit-logs">
+                    <span class="icon">🧾</span> Audit Logs
+                </button>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">
@@ -390,6 +393,40 @@
                         <!-- Populated by JavaScript -->
                     </div>
                 </section>
+
+                <!-- Audit Logs Tab -->
+                <section id="audit-logs" class="tab-content">
+                    <div class="section-header">
+                        <h3>Audit Logs</h3>
+                        <button class="btn btn-secondary" id="refresh-audit-logs">🔄 Refresh</button>
+                    </div>
+                    <div class="filter-bar">
+                        <input type="text" id="audit-log-search" placeholder="Search logs..." class="search-input">
+                        <select id="audit-log-severity" class="filter-select">
+                            <option value="">All Severity</option>
+                            <option value="safe">Safe</option>
+                            <option value="warning">Warning</option>
+                            <option value="danger">Danger</option>
+                        </select>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                    <th>Severity</th>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-logs-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -405,6 +442,7 @@
     <script src="js/users.js"></script>
     <script src="js/hydrograte.js"></script>
     <script src="js/announcements.js"></script>
+    <script src="js/audit_logs.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

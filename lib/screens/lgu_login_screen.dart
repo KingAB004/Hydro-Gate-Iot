@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard_screen.dart';
+import '../services/audit_log_service.dart';
 import '../widgets/custom_text_field.dart';
 
 class LGULoginScreen extends StatefulWidget {
@@ -28,6 +29,13 @@ class _LGULoginScreenState extends State<LGULoginScreen> {
 
     // Email domain validation for LGU
     if (!email.toLowerCase().endsWith('@lgu.com')) {
+      await AuditLogService().logEvent(
+        action: 'login_denied',
+        severity: 'warning',
+        description: 'LGU login denied due to invalid domain',
+        email: email,
+        role: 'LGU',
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Access denied. Only @lgu.com accounts are allowed.'),
@@ -47,12 +55,26 @@ class _LGULoginScreenState extends State<LGULoginScreen> {
         password: password,
       );
       if (mounted) {
+        await AuditLogService().logEvent(
+          action: 'login',
+          severity: 'safe',
+          description: 'LGU login',
+          email: email,
+          role: 'LGU',
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
+      await AuditLogService().logEvent(
+        action: 'login_failed',
+        severity: 'warning',
+        description: 'LGU login failed: ${e.code}',
+        email: email,
+        role: 'LGU',
+      );
       if (mounted) {
         String message = 'An error occurred';
         if (e.code == 'user-not-found') {

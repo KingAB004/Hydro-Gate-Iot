@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/audit_log_service.dart';
 import '../widgets/alerts_dropdown.dart';
 import 'main_home_screen.dart';
 
@@ -117,6 +118,16 @@ class _AlertsScreenState extends State<AlertsScreen> {
         batch.delete(doc.reference);
       }
       await batch.commit();
+
+      try {
+        await AuditLogService().logEvent(
+          action: 'alerts_delete_all',
+          severity: 'danger',
+          description: 'All alerts deleted',
+        );
+      } catch (e) {
+        debugPrint('Audit log write failed: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -367,6 +378,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
               },
               onDismissed: (_) async {
                 await doc.reference.delete();
+                try {
+                  await AuditLogService().logEvent(
+                    action: 'alert_deleted',
+                    severity: 'warning',
+                    description: 'Alert deleted: $title',
+                  );
+                } catch (e) {
+                  debugPrint('Audit log write failed: $e');
+                }
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

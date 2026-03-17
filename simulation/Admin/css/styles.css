@@ -521,6 +521,12 @@ body {
     background-color: var(--light-bg);
 }
 
+.empty-row {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px 12px;
+}
+
 .action-buttons {
     display: flex;
     gap: 5px;

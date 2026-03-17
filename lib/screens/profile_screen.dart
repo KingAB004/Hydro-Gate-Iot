@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/audit_log_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,6 +67,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Also update FirebaseAuth displayName
       await user.updateDisplayName(_usernameController.text.trim());
+
+      try {
+        await AuditLogService().logEvent(
+          action: 'profile_update',
+          severity: 'safe',
+          description: 'Profile updated',
+        );
+      } catch (e) {
+        debugPrint('Audit log write failed: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

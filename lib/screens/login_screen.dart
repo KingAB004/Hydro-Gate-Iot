@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'registration_screen.dart';
 import 'main_home_screen.dart';
 import '../services/auth_service.dart';
+import '../services/audit_log_service.dart';
 import '../widgets/google_logo_base64.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -31,12 +32,30 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final credential = await AuthService().signInWithGoogle();
       if (credential != null && mounted) {
+        try {
+          await AuditLogService().logEvent(
+            action: 'login',
+            severity: 'safe',
+            description: 'Google login',
+          );
+        } catch (e) {
+          debugPrint('Audit log write failed: $e');
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainHomeScreen()),
         );
       }
     } catch (e) {
+      try {
+        await AuditLogService().logEvent(
+          action: 'login_failed',
+          severity: 'warning',
+          description: 'Google login failed: $e',
+        );
+      } catch (logError) {
+        debugPrint('Audit log write failed: $logError');
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -69,12 +88,31 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
       if (mounted) {
+        try {
+          await AuditLogService().logEvent(
+            action: 'login',
+            severity: 'safe',
+            description: 'Email/password login',
+          );
+        } catch (e) {
+          debugPrint('Audit log write failed: $e');
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainHomeScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
+      try {
+        await AuditLogService().logEvent(
+          action: 'login_failed',
+          severity: 'warning',
+          description: 'Email/password login failed: ${e.code}',
+          email: _emailController.text.trim(),
+        );
+      } catch (logError) {
+        debugPrint('Audit log write failed: $logError');
+      }
       if (mounted) {
         String message = 'An error occurred';
         if (e.code == 'user-not-found') {

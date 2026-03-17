@@ -5,11 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
 import '../services/weather_service.dart';
 import '../services/auth_service.dart';
+import '../services/audit_log_service.dart';
 import '../models/weather_models.dart';
 import '../utils/weather_utils.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'welcome_screen.dart';
+import 'audit_logs_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   String _username = 'Loading...';
   String _email = 'Loading...';
+  String _role = 'Unknown';
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -106,6 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           if (data != null && mounted) {
             setState(() {
               _username = data['username'] ?? _username;
+              _role = data['role'] ?? _role;
             });
           }
         }
@@ -423,9 +427,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   void _toggleGateDialog() {
+    final parentContext = context;
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
@@ -456,11 +461,17 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ElevatedButton(
               onPressed: () async {
                 final newStatus = isGateOpen ? 'closed' : 'open';
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 try {
                   await _floodRef.update({'floodgate_status': newStatus});
+                  await AuditLogService().logEvent(
+                    action: 'floodgate_update',
+                    severity: 'warning',
+                    description: 'Floodgate set to $newStatus',
+                    role: _role,
+                  );
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
                         content: Text('successfully updated floodgate to $newStatus'),
                         backgroundColor: successGreen,
@@ -469,8 +480,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   }
                 } catch (e) {
                   debugPrint("Firebase Update Error: $e");
+                  await AuditLogService().logEvent(
+                    action: 'floodgate_update_failed',
+                    severity: 'danger',
+                    description: 'Failed to set floodgate to $newStatus: $e',
+                    role: _role,
+                  );
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
                         content: Text('Failed to update: $e'),
                         backgroundColor: dangerRed,
@@ -786,6 +803,12 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 ),
                 _buildDrawerItem(icon: Icons.logout_rounded, title: 'Logout', onTap: () async {
                   Navigator.pop(context);
+                  await AuditLogService().logEvent(
+                    action: 'logout',
+                    severity: 'safe',
+                    description: 'User logged out',
+                    role: _role,
+                  );
                   await AuthService().signOut();
                   if (context.mounted) {
                     Navigator.pushAndRemoveUntil(
@@ -795,6 +818,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     );
                   }
                 }, isDestructive: true),
+                if (_role == 'Admin')
+                  _buildDrawerItem(icon: Icons.receipt_long_rounded, title: 'Audit Logs', onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuditLogsScreen()),
+                    );
+                  }),
               ],
             ),
           ),

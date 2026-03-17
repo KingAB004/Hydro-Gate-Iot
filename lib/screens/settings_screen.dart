@@ -2,6 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../services/audit_log_service.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -361,6 +362,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmLogout == true && mounted) {
+      await AuditLogService().logEvent(
+        action: 'logout',
+        severity: 'safe',
+        description: 'User logged out from settings',
+      );
       await AuthService().signOut();
       if (mounted) {
         Navigator.pushAndRemoveUntil(

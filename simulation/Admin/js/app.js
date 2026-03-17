@@ -10,6 +10,9 @@ function initApp() {
     initUsersManagement();
     initHydrograteStatus();
     initAnnouncements();
+    if (typeof initAuditLogs === 'function') {
+        initAuditLogs();
+    }
     
     // Setup tab navigation
     setupTabNavigation();
@@ -43,7 +46,8 @@ function setupTabNavigation() {
                 'overview': 'Dashboard Overview',
                 'users': 'User Management',
                 'hydrograte': 'Hydrograte Status & Model',
-                'announcements': 'Announcements & Messages'
+                'announcements': 'Announcements & Messages',
+                'audit-logs': 'Audit Logs'
             };
             document.getElementById('page-title').textContent = titles[tabName];
         });
