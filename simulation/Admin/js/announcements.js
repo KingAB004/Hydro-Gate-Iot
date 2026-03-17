@@ -122,6 +122,14 @@ async function handleAnnouncementSubmit(e) {
         const firestoreDb = window.firestoreDb;
         const docRef = await firestoreDb.collection('announcements').add(newAnnouncementData);
         console.log("Announcement added with ID: ", docRef.id);
+
+        if (typeof window.writeAuditLog === 'function') {
+            await window.writeAuditLog(
+                'admin_announcement_create',
+                'safe',
+                'Created announcement: ' + title + ' (' + type + ')'
+            );
+        }
         
         alert(`Announcement ${schedule ? 'scheduled' : 'sent'} successfully!`);
         toggleAnnouncementForm();
@@ -186,7 +194,38 @@ function renderAnnouncements() {
                     <span>${dateStr}</span>
                 </div>
             </div>
+            <div class="announcement-actions">
+                <button class="btn-delete-announcement" onclick="window.deleteAnnouncement('${announcement.id}', '${announcement.title.replace(/'/g, "\\'")}')">Delete</button>
+            </div>
         `;
         container.appendChild(card);
     });
 }
+
+window.deleteAnnouncement = async function(id, title) {
+    if (!confirm('Delete this announcement? This action cannot be undone.')) {
+        return;
+    }
+
+    const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) {
+        alert('Firestore is not initialized. Please reload the page.');
+        return;
+    }
+
+    try {
+        await firestoreDb.collection('announcements').doc(id).delete();
+        if (typeof window.writeAuditLog === 'function') {
+            await window.writeAuditLog(
+                'admin_announcement_delete',
+                'warning',
+                'Deleted announcement: ' + title
+            );
+        }
+        await fetchAnnouncements();
+    } catch (error) {
+        console.error('Error deleting announcement:', error);
+        handleAnnouncementPermissionError(error);
+        alert('Failed to delete announcement: ' + (error.message || 'Unknown error'));
+    }
+};

@@ -114,7 +114,24 @@ function attachHydrograteEventListeners() {
                     if (snapshot.exists()) {
                         const currentStatus = snapshot.val().floodgate_status;
                         const newStatus = currentStatus === 'open' ? 'closed' : 'open';
-                        floodRef.update({ floodgate_status: newStatus });
+                        floodRef.update({ floodgate_status: newStatus }).then(function() {
+                            if (typeof window.writeAuditLog === 'function') {
+                                window.writeAuditLog(
+                                    'admin_floodgate_toggle',
+                                    'warning',
+                                    'Floodgate set to ' + newStatus
+                                );
+                            }
+                        }).catch(function(error) {
+                            console.error('Floodgate update failed:', error);
+                            if (typeof window.writeAuditLog === 'function') {
+                                window.writeAuditLog(
+                                    'admin_floodgate_toggle_failed',
+                                    'danger',
+                                    'Floodgate toggle failed: ' + error.message
+                                );
+                            }
+                        });
                     }
                 });
             }
@@ -414,6 +431,13 @@ function calibrateDevice() {
 
             renderHydrograteStatus();
             if (btn) { btn.disabled = false; btn.textContent = 'Calibrate Now'; }
+            if (typeof window.writeAuditLog === 'function') {
+                window.writeAuditLog(
+                    'admin_hydrograte_calibrate',
+                    'safe',
+                    'Calibrated device: ' + (hydrograteData?.name || 'Unknown')
+                );
+            }
             alert('Device calibration completed successfully!');
         }, 3000);
     }
@@ -440,6 +464,13 @@ function restartDevice() {
 
             renderHydrograteStatus();
             if (btn) { btn.disabled = false; btn.textContent = 'Restart Device'; }
+            if (typeof window.writeAuditLog === 'function') {
+                window.writeAuditLog(
+                    'admin_hydrograte_restart',
+                    'warning',
+                    'Restarted device: ' + (hydrograteData?.name || 'Unknown')
+                );
+            }
             alert('Device restarted successfully!');
         }, 2000);
     }

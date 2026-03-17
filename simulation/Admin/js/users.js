@@ -167,6 +167,13 @@ async function handleUserFormSubmit(e) {
                 status,
                 updatedAt: new Date().toISOString()
             });
+            if (typeof window.writeAuditLog === 'function') {
+                await window.writeAuditLog(
+                    'admin_user_update',
+                    'safe',
+                    'Updated user: ' + email
+                );
+            }
             alert('User updated successfully!');
         } catch (error) {
             console.error("Error updating user: ", error);
@@ -194,6 +201,14 @@ async function handleUserFormSubmit(e) {
                 smsNotificationsEnabled: true,
                 updatedAt: new Date().toISOString()
             });
+
+            if (typeof window.writeAuditLog === 'function') {
+                await window.writeAuditLog(
+                    'admin_user_create',
+                    'safe',
+                    'Created user: ' + email
+                );
+            }
             
             // Sign out the secondary app instance
             await secondaryAuth.signOut();
@@ -295,7 +310,15 @@ window.deleteUser = async function(id) {
     if (confirm('Are you sure you want to delete this user from the dashboard list? Note: This deletes the Firestore profile, but cannot delete the Firebase Auth account directly from the client.')) {
         const firestoreDb = window.firestoreDb;
         try {
+            const user = users.find(u => u.id === id);
             await firestoreDb.collection('users').doc(id).delete();
+            if (typeof window.writeAuditLog === 'function') {
+                await window.writeAuditLog(
+                    'admin_user_delete',
+                    'warning',
+                    'Deleted user profile: ' + (user?.email || id)
+                );
+            }
             if (typeof usersUnsubscribe !== 'function') {
                 await fetchUsers(); // Refresh list fallback
             }

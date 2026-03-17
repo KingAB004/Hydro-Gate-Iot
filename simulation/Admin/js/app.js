@@ -13,6 +13,7 @@ function initApp() {
     if (typeof initAuditLogs === 'function') {
         initAuditLogs();
     }
+    setupAdminAuditLogging();
     
     // Setup tab navigation
     setupTabNavigation();
@@ -23,6 +24,49 @@ function initApp() {
     // Setup refresh button
     document.getElementById('refresh-btn').addEventListener('click', refreshAllData);
 }
+
+function setupAdminAuditLogging() {
+    const auth = window.auth;
+    if (!auth) return;
+
+    let lastAuthUid = null;
+
+    auth.onAuthStateChanged(function(user) {
+        const currentUid = user ? user.uid : null;
+        if (currentUid && currentUid !== lastAuthUid) {
+            writeAuditLog('admin_login', 'safe', 'Admin signed in', user);
+        }
+        if (!currentUid && lastAuthUid) {
+            writeAuditLog('admin_logout', 'safe', 'Admin signed out', { uid: lastAuthUid });
+        }
+        lastAuthUid = currentUid;
+    });
+}
+
+async function writeAuditLog(action, severity, description, userOverride) {
+    const db = window.db;
+    if (!db) return;
+
+    const user = userOverride || window.auth?.currentUser;
+    const email = user?.email || 'Unknown';
+    const userId = user?.uid || '';
+
+    try {
+        await db.ref('audit_logs').push().set({
+            action: action,
+            severity: severity,
+            description: description || '',
+            email: email,
+            role: 'Admin',
+            userId: userId,
+            timestamp: Date.now()
+        });
+    } catch (e) {
+        console.error('Audit log write failed:', e);
+    }
+}
+
+window.writeAuditLog = writeAuditLog;
 
 // Setup Tab Navigation
 function setupTabNavigation() {
