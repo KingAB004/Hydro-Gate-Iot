@@ -9,6 +9,8 @@ class WeatherData {
   final String country;
   final DateTime dateTime;
   final String icon;
+  final DateTime? sunrise;
+  final DateTime? sunset;
 
   WeatherData({
     required this.temperature,
@@ -21,9 +23,20 @@ class WeatherData {
     required this.country,
     required this.dateTime,
     required this.icon,
+    this.sunrise,
+    this.sunset,
   });
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
+    final sys = json['sys'] as Map<String, dynamic>?;
+    DateTime? sunrise;
+    DateTime? sunset;
+    if (sys != null && sys['sunrise'] != null) {
+      sunrise = DateTime.fromMillisecondsSinceEpoch((sys['sunrise'] as num).toInt() * 1000);
+    }
+    if (sys != null && sys['sunset'] != null) {
+      sunset = DateTime.fromMillisecondsSinceEpoch((sys['sunset'] as num).toInt() * 1000);
+    }
     return WeatherData(
       temperature: (json['main']['temp'] as num).toDouble(),
       description: json['weather'][0]['description'] as String,
@@ -35,6 +48,8 @@ class WeatherData {
       country: json['sys']['country'] as String,
       dateTime: DateTime.fromMillisecondsSinceEpoch(json['dt'] * 1000),
       icon: json['weather'][0]['icon'] as String,
+      sunrise: sunrise,
+      sunset: sunset,
     );
   }
 }
@@ -80,9 +95,11 @@ class ForecastData {
 class WeatherForecast {
   final WeatherData currentWeather;
   final List<ForecastData> forecast;
+  final List<ForecastData> hourlyForecast;
 
   WeatherForecast({
     required this.currentWeather,
     required this.forecast,
+    required this.hourlyForecast,
   });
 }

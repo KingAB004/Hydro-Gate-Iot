@@ -116,6 +116,29 @@ class WeatherService {
     }
   }
 
+  // Get short-term hourly forecast (next 24h in 3-hour steps)
+  Future<List<ForecastData>> getHourlyForecast(String cityName) async {
+    try {
+      final apiKey = _apiKey;
+      if (apiKey.isEmpty) {
+        throw Exception('OpenWeatherMap API key is not configured. Please check your .env file.');
+      }
+
+      final url = '$_baseUrl/forecast?q=$cityName&appid=$apiKey&units=metric';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> forecastList = data['list'];
+        return forecastList.take(8).map((item) => ForecastData.fromJson(item)).toList();
+      } else {
+        throw Exception('Failed to load forecast: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching hourly forecast: $e');
+    }
+  }
+
   // Get 5-day forecast by coordinates
   Future<List<ForecastData>> getForecastByCoordinates(double lat, double lon) async {
     try {
@@ -159,10 +182,12 @@ class WeatherService {
     try {
       final currentWeather = await getCurrentWeather(cityName);
       final forecast = await getForecast(cityName);
+      final hourly = await getHourlyForecast(cityName);
       
       return WeatherForecast(
         currentWeather: currentWeather,
         forecast: forecast,
+        hourlyForecast: hourly,
       );
     } catch (e) {
       throw Exception('Error fetching complete weather data: $e');
@@ -174,10 +199,12 @@ class WeatherService {
     try {
       final currentWeather = await getCurrentWeatherByCoordinates(lat, lon);
       final forecast = await getForecastByCoordinates(lat, lon);
+      final hourly = await getForecastByCoordinates(lat, lon);
       
       return WeatherForecast(
         currentWeather: currentWeather,
         forecast: forecast,
+        hourlyForecast: hourly.take(8).toList(),
       );
     } catch (e) {
       throw Exception('Error fetching complete weather data: $e');
