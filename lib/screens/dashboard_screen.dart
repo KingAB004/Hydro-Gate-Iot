@@ -23,6 +23,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   bool isGateOpen = true;
   double waterHeightCm = 1500; // Default 15m
+  double waterLevelM = 0.0;
   String waterLevelStatus = 'Normal';
   String lastUpdated = '';
   
@@ -125,6 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         setState(() {
           isGateOpen = data['floodgate_status'] != 'closed';
           waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
+          waterLevelM = (data['water_level_m'] ?? 0).toDouble();
           waterLevelStatus = data['water_level']?.toString() ?? 'Normal';
           lastUpdated = data['last_updated']?.toString() ?? '';
         });
@@ -202,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildCurrentStatusMessage() {
-    final double simulatedMeters = waterHeightCm / 2.54;
+    final double simulatedMeters = waterLevelM;
     
     Color bgColor;
     Color iconColor;
@@ -533,7 +535,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildWaterLevelMonitorCard() {
-    final double simulatedMeters = waterHeightCm / 2.54;
+    final double simulatedMeters = waterLevelM;
     final bool isCritical = simulatedMeters >= 8;
     return Container(
       padding: const EdgeInsets.all(24.0),
@@ -630,7 +632,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildGauge() {
-    final double simulatedMeters = waterHeightCm / 2.54;
+    final double simulatedMeters = waterLevelM;
     return Container(
       width: 48,
       height: 220,

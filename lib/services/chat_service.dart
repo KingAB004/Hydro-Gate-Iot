@@ -22,14 +22,14 @@ class ChatService {
     if (event.snapshot.exists) {
       final data = event.snapshot.value as Map<dynamic, dynamic>;
       final waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
-      final waterMeters = waterHeightCm / 2.54;
+      final waterLevelM = (data['water_level_m'] ?? 0).toDouble();
       final gateStatus = data['floodgate_status'] ?? 'unknown';
       final waterLevel = data['water_level'] ?? 'unknown';
       final lastUpdated = data['last_updated'] ?? 'unknown';
 
       floodContext = '''
 Current Flood Monitoring Status:
-- Water Height: ${waterMeters.toStringAsFixed(2)} meters
+- Water Height: ${waterLevelM.toStringAsFixed(3)} meters
 - Water Level Status: $waterLevel
 - Floodgate Status: $gateStatus
 - Last Updated: $lastUpdated
