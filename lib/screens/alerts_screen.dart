@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/alerts_dropdown.dart';
 import 'main_home_screen.dart';
+import '../widgets/chatbot_modal.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -122,6 +123,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgLight,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const ChatbotModal(),
+          );
+        },
+        backgroundColor: brandBlue,
+        elevation: 6,
+        child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -141,6 +156,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               ),
               const SizedBox(height: 24),
               _buildAnnouncementsList(),
+              const SizedBox(height: 80),
             ],
           ),
         ),

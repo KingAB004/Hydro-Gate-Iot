@@ -5,6 +5,7 @@ import '../services/weather_service.dart';
 import '../models/weather_models.dart';
 import '../utils/weather_utils.dart';
 import 'main_home_screen.dart';
+import '../widgets/chatbot_modal.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -89,6 +90,20 @@ class _WeatherScreenState extends State<WeatherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgLight,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const ChatbotModal(),
+          );
+        },
+        backgroundColor: brandBlue,
+        elevation: 6,
+        child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshWeather,
@@ -114,7 +129,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   const SizedBox(height: 20),
                   _buildDailyForecast(),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 80),
               ],
             ),
           ),
