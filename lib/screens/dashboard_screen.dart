@@ -648,7 +648,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           AnimatedContainer(
             duration: const Duration(seconds: 1),
             curve: Curves.fastOutSlowIn,
-            height: (simulatedMeters / 11) * 220, // Max 11 simulated meters mapped to 220px
+            height: ((simulatedMeters / 11) * 220).clamp(0.0, 220.0), // Max 11 simulated meters mapped to 220px
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
