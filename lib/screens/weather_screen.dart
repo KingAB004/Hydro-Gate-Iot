@@ -24,9 +24,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
   static const Color nightBlueDeep = Color(0xFF081432);
   static const Color starBlue = Color(0xFF1E3A8A);
   
-  static const Color brandBlue = Color(0xFF0EA5E9);
+  static const Color brandBlue = Color(0xFF007EAA);
   static const Color primaryGradientStart = Color(0xFF1D4ED8);
-  static const Color primaryGradientEnd = Color(0xFF0EA5E9);
+  static const Color primaryGradientEnd = Color(0xFF007EAA);
   static const Color warningOrange = Color(0xFFF59E0B);
   static const Color dangerRed = Color(0xFFEF4444);
 

@@ -18,7 +18,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const Color cardWhite = Colors.white;
   static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
-  static const Color brandBlue = Color(0xFF0EA5E9);
+  static const Color brandBlue = Color(0xFF007EAA);
   static const Color dangerRed = Color(0xFFEF4444);
 
   // ── Profile state ────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ class _ChatbotModalState extends State<ChatbotModal> with TickerProviderStateMix
   static const Color cardWhite = Colors.white;
   static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
-  static const Color brandBlue = Color(0xFF0EA5E9);
+  static const Color brandBlue = Color(0xFF007EAA);
 
   final ChatService _chatService = ChatService();
   final TextEditingController _controller = TextEditingController();
@@ -135,7 +135,7 @@ class _ChatbotModalState extends State<ChatbotModal> with TickerProviderStateMix
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+              colors: [Color(0xFF007EAA), Color(0xFF005E80)],
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
@@ -233,7 +233,7 @@ class _ChatbotModalState extends State<ChatbotModal> with TickerProviderStateMix
               height: 32,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                  colors: [Color(0xFF007EAA), Color(0xFF005E80)],
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -295,7 +295,7 @@ class _ChatbotModalState extends State<ChatbotModal> with TickerProviderStateMix
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)]),
+              gradient: const LinearGradient(colors: [Color(0xFF007EAA), Color(0xFF005E80)]),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.water_drop_rounded, color: Colors.white, size: 16),
@@ -395,7 +395,7 @@ class _ChatbotModalState extends State<ChatbotModal> with TickerProviderStateMix
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                    colors: [Color(0xFF007EAA), Color(0xFF005E80)],
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [

@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
   
-  static const Color brandBlue = Color(0xFF0EA5E9);
+  static const Color brandBlue = Color(0xFF007EAA);
   static const Color dangerRed = Color(0xFFEF4444);
   static const Color warningOrange = Color(0xFFF59E0B);
   static const Color successGreen = Color(0xFF10B981);
