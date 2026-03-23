@@ -35,9 +35,9 @@ Current Flood Monitoring Status:
 - Last Updated: $lastUpdated
 
 Water Level Thresholds:
-- Normal: below 7 meters
-- Warning: 7 to 8 meters
-- Critical: 8 meters and above
+- Normal: 0.15 meters (15cm) and below
+- Caution: 0.16 to 0.17 meters (16-17cm)
+- Critical: 0.18 meters (18cm) and above
 ''';
     }
 
@@ -72,9 +72,9 @@ $weatherContext
 Instructions:
 - Always respond in a clear, concise, and helpful manner.
 - When asked about water levels, floodgate status, or weather, use the live data provided above.
-- If the water level is Critical (8m+), emphasize urgency and safety.
-- If the water level is Warning (7-8m), advise users to stay alert.
-- If Normal (<7m), reassure the user but remind them to stay informed.
+- If the water level is Critical (0.18m+), emphasize urgency and safety.
+- If the water level is Caution (0.16-0.17m), advise users to stay alert.
+- If Normal (<=0.15m), reassure the user but remind them to stay informed.
 - You are read-only; you cannot control the floodgate. Only authorized admins can do that via the dashboard.
 - Keep responses brief and focused on flood safety and system status.
 - If asked something outside your scope (e.g., general trivia), politely redirect the user to flood-related topics.

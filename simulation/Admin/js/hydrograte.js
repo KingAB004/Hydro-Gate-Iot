@@ -10,9 +10,9 @@ let hydrogrates = [
         model: 'Hydrograte-Pro-X1',
         firmware: 'v2.4.1',
         serial: 'HGP-2024-001',
-        sensors: 3,
+        sensors: 1,
         waterLevel: 0.0,
-        maxWaterLevel: 11,
+        maxWaterLevel: 0.25,
         lastCalibration: '2026-03-01',
         nextCalibration: '2026-04-01',
         installationDate: '2024-01-15',
@@ -32,9 +32,9 @@ let hydrogrates = [
         model: 'Hydrograte-Lite-V2',
         firmware: 'v2.3.5',
         serial: 'HGP-2024-002',
-        sensors: 2,
+        sensors: 1,
         waterLevel: 0.0,
-        maxWaterLevel: 11,
+        maxWaterLevel: 0.25,
         lastCalibration: '2026-02-28',
         nextCalibration: '2026-03-28',
         installationDate: '2024-03-10',
@@ -63,11 +63,7 @@ function initHydrograteStatus() {
                     if (data.last_updated) {
                         mainStation.lastPing = data.last_updated;
                     }
-                    let activeSensors = 0;
-                    if (data.sensor_safe) activeSensors++;
-                    if (data.sensor_warning) activeSensors++;
-                    if (data.sensor_danger) activeSensors++;
-                    mainStation.sensors = activeSensors || 3;
+                    mainStation.sensors = 1; // Ultrasonic Sensor
                     
                     renderHydrogratesList();
                     if (selectedHydrograteId === mainStation.id) {

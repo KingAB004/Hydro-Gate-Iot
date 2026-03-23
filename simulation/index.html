@@ -515,7 +515,7 @@
                     </div>
                     <div class="status-text-content">
                         <span class="status-label">Current Status</span>
-                        <span id="status-value" class="status-value">Medium Risk</span>
+                        <span id="status-value" class="status-value">Caution</span>
                     </div>
                 </div>
                 <p id="status-desc" class="status-desc">
@@ -528,7 +528,7 @@
                     <div class="card-icon">💧</div>
                     <span class="card-title">Water Level Monitor</span>
                 </div>
-                <div id="level-num" class="level-value">15.2m</div>
+                <div id="level-num" class="level-value">15.2cm</div>
 
                 <div class="gauge-section">
                     <div class="vertical-gauge">
@@ -542,19 +542,15 @@
                     <div class="legend-vertical">
                         <div class="legend-item">
                             <div class="color-box" style="background: #E53935;"></div>
-                            <span>Critical (18m+)</span>
+                            <span>Critical (18cm+)</span>
                         </div>
                         <div class="legend-item">
                             <div class="color-box" style="background: #FF8A00;"></div>
-                            <span>2nd Alarm (16-18m)</span>
+                            <span>Caution (16-17cm)</span>
                         </div>
                         <div class="legend-item">
                             <div class="color-box" style="background: #FFC107;"></div>
-                            <span>1st Alarm (15-16m)</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="color-box" style="background: #4CAF50;"></div>
-                            <span>Normal (&lt;15m)</span>
+                            <span>Normal (&lt;15cm)</span>
                         </div>
                     </div>
                 </div>
@@ -605,10 +601,10 @@
             <input type="range" id="level-slider" min="0" max="20" step="0.1" value="15.2">
             <div
                 style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; color: #94A3B8;">
-                <span>0m</span>
-                <span>15m</span>
-                <span>18m</span>
-                <span>20m</span>
+                <span>0cm</span>
+                <span>15cm</span>
+                <span>18cm</span>
+                <span>20cm</span>
             </div>
         </div>
     </div>
@@ -643,7 +639,7 @@
         });
 
         function updateUI(level) {
-            levelNum.innerText = `${level.toFixed(1)}m`;
+            levelNum.innerText = `${level.toFixed(1)}cm`;
 
             // Gauge height
             const heightPercent = (level / 20) * 100;
@@ -657,16 +653,11 @@
                 statusValue.innerText = "Safe";
                 statusIcon.innerText = "✓";
                 statusDesc.innerText = "Water levels are normal. No immediate action required.";
-            } else if (level < 16) {
+            } else if (level < 18) {
                 statusCard.classList.add('warning');
-                statusValue.innerText = "Medium Risk";
+                statusValue.innerText = "Caution";
                 statusIcon.innerText = "⚠";
                 statusDesc.innerText = "Water levels are elevated. Stay alert and monitor updates.";
-            } else if (level < 18) {
-                statusCard.classList.add('alarm');
-                statusValue.innerText = "High Risk";
-                statusIcon.innerText = "‼";
-                statusDesc.innerText = "High water levels detected. Prepare for possible gate closure.";
             } else {
                 statusCard.classList.add('critical');
                 statusValue.innerText = "Critical";
