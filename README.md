@@ -1,4 +1,4 @@
-# Automated Floodgate and Monitoring System (AFMS)
+# HydroGate (Automated Floodgate and Monitoring System)
 
 This is the Flutter-based mobile and web application for the Automated Floodgate and Monitoring System.
 
