@@ -7,22 +7,77 @@ import 'screens/welcome_screen.dart';
 import 'screens/main_home_screen.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
+import 'package:afwms_flutter/widgets/startup_widgets.dart';
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    print("Error loading .env file: $e");
+  runApp(const RootApp());
+}
+
+class RootApp extends StatefulWidget {
+  const RootApp({super.key});
+
+  @override
+  State<RootApp> createState() => _RootAppState();
+}
+
+class _RootAppState extends State<RootApp> {
+  late Future<void> _initialization;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _initData();
   }
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  runApp(const MyApp());
+
+  Future<void> _initData() async {
+    // Load environment variables
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("Error loading .env file: $e");
+    }
+    
+    // Initialize Firebase if not already initialized
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _initialization = _initData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: StartupErrorView(
+                error: snapshot.error.toString(),
+                onRetry: _retry,
+              ),
+            );
+          }
+          return const MyApp();
+        }
+
+        // Show a basic material app with a loading view while initializing
+        return const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: StartupLoadingView(),
+        );
+      },
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
