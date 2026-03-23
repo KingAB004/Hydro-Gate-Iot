@@ -13,6 +13,9 @@ function initApp() {
     if (typeof initAuditLogs === 'function') {
         initAuditLogs();
     }
+    if (typeof initStatistics === 'function') {
+        initStatistics();
+    }
     setupAdminAuditLogging();
     
     // Setup tab navigation
@@ -91,7 +94,8 @@ function setupTabNavigation() {
                 'users': 'User Management',
                 'hydrograte': 'Hydrograte Status & Model',
                 'announcements': 'Announcements & Messages',
-                'audit-logs': 'Audit Logs'
+                'audit-logs': 'Audit Logs',
+                'statistics': 'System Statistics'
             };
             document.getElementById('page-title').textContent = titles[tabName];
         });

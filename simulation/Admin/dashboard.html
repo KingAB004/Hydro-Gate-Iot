@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AFWMS Admin Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -18,19 +18,22 @@
             </div>
             <nav class="sidebar-nav">
                 <button class="nav-btn active" data-tab="overview">
-                    <span class="icon">📊</span> Overview
+                    <i data-lucide="layout-dashboard" class="icon"></i> Overview
                 </button>
                 <button class="nav-btn" data-tab="users">
-                    <span class="icon">👥</span> User Management
+                    <i data-lucide="users" class="icon"></i> User Management
                 </button>
                 <button class="nav-btn" data-tab="hydrograte">
-                    <span class="icon">💧</span> Hydrograte Status
+                    <i data-lucide="droplet" class="icon"></i> Hydrograte Status
                 </button>
                 <button class="nav-btn" data-tab="announcements">
-                    <span class="icon">📢</span> Announcements
+                    <i data-lucide="megaphone" class="icon"></i> Announcements
                 </button>
                 <button class="nav-btn" data-tab="audit-logs">
-                    <span class="icon">🧾</span> Audit Logs
+                    <i data-lucide="file-text" class="icon"></i> Audit Logs
+                </button>
+                <button class="nav-btn" data-tab="statistics">
+                    <i data-lucide="bar-chart-3" class="icon"></i> Statistics
                 </button>
             </nav>
             <div class="sidebar-footer">
@@ -53,10 +56,10 @@
                 </div>
                 <div class="header-right">
                     <button class="btn-icon" id="refresh-btn" title="Refresh Data">
-                        🔄
+                        <i data-lucide="refresh-cw"></i>
                     </button>
                     <button class="btn-icon" id="settings-btn" title="Settings">
-                        ⚙️
+                        <i data-lucide="settings"></i>
                     </button>
                 </div>
             </header>
@@ -394,13 +397,43 @@
                     </div>
                 </section>
 
+                <!-- Statistics Tab -->
+                <section id="statistics" class="tab-content">
+                    <div class="section-header">
+                        <h3>Real-time Data Statistics</h3>
+                        <div class="timeframe-selector">
+                            <button class="btn btn-secondary active timeframe-btn" data-timeframe="day">Day</button>
+                            <button class="btn btn-secondary timeframe-btn" data-timeframe="week">Week</button>
+                            <button class="btn btn-secondary timeframe-btn" data-timeframe="month">Month</button>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div class="card">
+                            <h4>Water Level Trend (Live)</h4>
+                            <div style="height: 400px;">
+                                <canvas id="liveWaterLevelChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h4>Historical Average</h4>
+                            <div style="height: 400px;">
+                                <canvas id="historicalWaterLevelChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Audit Logs Tab -->
                 <section id="audit-logs" class="tab-content">
                     <div class="section-header">
                         <h3>Audit Logs</h3>
-                        <button class="btn btn-secondary" id="refresh-audit-logs">🔄 Refresh</button>
+                        <button class="btn btn-secondary" id="refresh-audit-logs">
+                            <i data-lucide="refresh-cw"></i> Refresh
+                        </button>
                     </div>
                     <div class="filter-bar">
+                        <i data-lucide="search" class="search-icon"></i>
                         <input type="text" id="audit-log-search" placeholder="Search logs..." class="search-input">
                         <select id="audit-log-severity" class="filter-select">
                             <option value="">All Severity</option>
@@ -437,12 +470,16 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
     
+    <!-- Lucide initialization -->
+    <script>lucide.createIcons();</script>
+
     <!-- App Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/users.js"></script>
     <script src="js/hydrograte.js"></script>
     <script src="js/announcements.js"></script>
     <script src="js/audit_logs.js"></script>
+    <script src="js/statistics.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

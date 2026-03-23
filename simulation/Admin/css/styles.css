@@ -7,11 +7,11 @@
 }
 
 :root {
-    --primary-color: #000000;
-    --secondary-color: #333333;
-    --success-color: #00C853;
-    --danger-color: #FF5252;
-    --warning-color: #FFB300;
+    --primary-color: #007EAA;
+    --secondary-color: #005f80;
+    --success-color: #10B981;
+    --danger-color: #EF4444;
+    --warning-color: #F59E0B;
     --dark-bg: #0A0A0A;
     --light-bg: #FAFAFA;
     --border-color: #E0E0E0;
@@ -101,8 +101,13 @@ body {
 }
 
 .nav-btn .icon {
-    font-size: 16px;
-    opacity: 0.8;
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+}
+
+.nav-btn.active .icon {
+    opacity: 1;
 }
 
 .sidebar-footer {
@@ -240,7 +245,13 @@ body {
 
 .btn-secondary:hover {
     background-color: var(--light-bg);
-    border-color: var(--text-secondary);
+    border-color: var(--primary-color);
+}
+
+.btn-secondary.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
 }
 
 .btn-small {
@@ -295,7 +306,7 @@ body {
 /* ===== Overview Grid ===== */
 .overview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 20px;
     margin-bottom: 30px;
 }
@@ -749,10 +760,9 @@ body {
     letter-spacing: -0.5px;
 }
 
-.gauge-label {2px;
+.gauge-label {
+    font-size: 12px;
     color: var(--text-secondary);
-    margin-top: 8px;
-    font-weight: 400t-secondary);
     margin-top: 10px;
 }
 
