@@ -212,20 +212,20 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     String title;
     String message;
 
-    if (simulatedMeters >= 0.18) {
+    if (simulatedMeters >= 18.0) {
       // CRITICAL LEVEL
       bgColor = dangerRed.withOpacity(0.1);
       iconColor = dangerRed;
       icon = Icons.warning_rounded;
       title = 'CRITICAL WATER LEVEL';
       message = 'Water levels exceed 18cm. Immediate action required.';
-    } else if (simulatedMeters >= 0.16) {
+    } else if (simulatedMeters >= 15.0) {
       // CAUTION LEVEL
       bgColor = warningOrange.withOpacity(0.1);
       iconColor = warningOrange;
       icon = Icons.report_problem_rounded;
       title = 'CAUTION: ELEVATED WATER LEVEL';
-      message = 'Water levels are between 16 and 17cm. Please monitor the situation closely.';
+      message = 'Water levels are 15cm or higher. Please monitor the situation closely.';
     } else {
       // NORMAL LEVEL
       bgColor = successGreen.withOpacity(0.1);
@@ -536,7 +536,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   Widget _buildWaterLevelMonitorCard() {
     final double simulatedMeters = waterLevelM;
-    final bool isCritical = simulatedMeters >= 0.18;
+    final bool isCritical = simulatedMeters >= 18.0;
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
@@ -601,7 +601,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${simulatedMeters.toStringAsFixed(2)}m',
+                      '${simulatedMeters.toStringAsFixed(2)}cm',
                       style: const TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.w800,
@@ -618,7 +618,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     const SizedBox(height: 32),
                     _buildLegendItem(dangerRed, 'Critical', '18cm+'),
                     const SizedBox(height: 12),
-                    _buildLegendItem(warningOrange, 'Caution', '16-17cm'),
+                    _buildLegendItem(warningOrange, 'Caution', '15-18cm'),
                     const SizedBox(height: 12),
                     _buildLegendItem(successGreen, 'Normal', '<15cm'),
                   ],
@@ -648,7 +648,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           AnimatedContainer(
             duration: const Duration(seconds: 1),
             curve: Curves.fastOutSlowIn,
-            height: ((simulatedMeters / 0.25) * 220).clamp(0.0, 220.0), // Max 0.25m (25cm) mapped to 220px
+            height: ((simulatedMeters / 25) * 220).clamp(0.0, 220.0), // Max 25cm mapped to 220px
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: LinearGradient(
