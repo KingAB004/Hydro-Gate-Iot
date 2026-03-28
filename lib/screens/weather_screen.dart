@@ -291,15 +291,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [nightBlue, starBlue],
-        ),
+        color: brandBlue,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: nightBlue.withOpacity(0.35),
+            color: brandBlue.withOpacity(0.3),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -451,8 +447,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: nightBlueDeep,
+        color: brandBlue.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: brandBlue.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,7 +459,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -481,7 +478,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   width: 72,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: brandBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -489,14 +486,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     children: [
                       Text(
                         hourLabel,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(color: textSecondary, fontSize: 12),
                       ),
                       const SizedBox(height: 8),
-                      Icon(icon, color: Colors.white, size: 20),
+                      Icon(icon, color: brandBlue, size: 20),
                       const SizedBox(height: 8),
                       Text(
                         temp,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        style: const TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
