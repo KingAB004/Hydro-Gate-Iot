@@ -11,6 +11,8 @@ import '../utils/weather_utils.dart';
 import 'settings_screen.dart';
 import 'welcome_screen.dart';
 import 'audit_logs_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../widgets/chatbot_modal.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -181,8 +183,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       ),
     );
   }
-
-
 
   Widget _buildCurrentStatusMessage() {
     final double simulatedMeters = waterLevelM;
@@ -615,7 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${simulatedMeters.toStringAsFixed(2)}m',
+                      '${simulatedMeters.toInt()}m',
                       style: const TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.w800,
