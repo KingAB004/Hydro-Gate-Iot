@@ -226,6 +226,22 @@ body {
     justify-content: center;
 }
 
+.btn:disabled,
+.btn-icon:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@keyframes hg-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.btn.is-loading svg,
+.btn-icon.is-loading svg {
+    animation: hg-spin 0.9s linear infinite;
+}
+
 .btn-icon:hover {
     color: var(--text-primary);
     border-color: #cbd5e1;

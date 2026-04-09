@@ -182,19 +182,23 @@ function updateStats() {
 
 // Refresh All Data
 function refreshAllData() {
+    const btn = document.getElementById('refresh-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('is-loading');
+    }
+
     if (typeof refreshHydrograteData !== 'undefined') {
         refreshHydrograteData();
     }
     updateStats();
 
-    // Visual feedback
-    const btn = document.getElementById('refresh-btn');
-    if (btn) {
-        btn.textContent = '✓';
-        setTimeout(() => {
-            btn.textContent = '🔄';
-        }, 1000);
-    }
+    // Visual feedback (keep icon consistent)
+    window.setTimeout(function() {
+        if (!btn) return;
+        btn.classList.remove('is-loading');
+        btn.disabled = false;
+    }, 900);
 }
 
 // Global error handler

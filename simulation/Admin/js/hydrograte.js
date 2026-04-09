@@ -495,12 +495,14 @@ function refreshHydrograteData() {
 
     renderHydrograteStatus();
 
-
     const btn = document.getElementById('refresh-hydrograte');
     if (btn) {
-        const originalText = btn.textContent;
-        btn.textContent = '? Refreshed';
-        setTimeout(function() { btn.textContent = originalText; }, 2000);
+        btn.disabled = true;
+        btn.classList.add('is-loading');
+        window.setTimeout(function() {
+            btn.classList.remove('is-loading');
+            btn.disabled = false;
+        }, 900);
     }
 }
 
