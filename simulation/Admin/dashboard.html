@@ -80,8 +80,8 @@
                                 <i data-lucide="waves" class="stat-icon"></i>
                             </div>
                             <div class="stat-info">
-                                <p class="stat-label">Current Water Level</p>
-                                <p class="stat-value" id="water-level">0%</p>
+                                <p class="stat-label">Current Water Level <span class="stat-label-sub" id="water-branch-label">(Branch: --)</span></p>
+                                <p class="stat-value" id="water-level">0.00m</p>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -217,6 +217,12 @@
                         <button class="btn btn-primary" id="add-hydrograte-btn">+ Add Device</button>
                     </div>
 
+                    <div class="status-legend" aria-label="Water level status legend">
+                        <div class="legend-item"><span class="status-dot safe" aria-hidden="true"></span> Safe</div>
+                        <div class="legend-item"><span class="status-dot warning" aria-hidden="true"></span> Warning</div>
+                        <div class="legend-item"><span class="status-dot critical" aria-hidden="true"></span> Critical</div>
+                    </div>
+
                     <!-- Hydrogrates List -->
                     <div id="hydrogrates-list" class="hydrogrates-grid">
                         <!-- Populated by JavaScript -->
@@ -237,6 +243,7 @@
                                 <h4>Device Status</h4>
                                 <div class="status-detail">
                                     <p><strong>Status:</strong> <span id="device-status" class="badge-success">Online</span></p>
+                                    <p><strong>Water Status:</strong> <span id="device-water-status" class="badge-success">Safe</span></p>
                                     <p><strong>Response Time:</strong> <span id="response-time">125ms</span></p>
                                     <p><strong>Last Ping:</strong> <span id="last-ping">Just now</span></p>
                                 </div>
@@ -258,6 +265,7 @@
                             <div class="card">
                                 <h4>Device Information</h4>
                                 <div class="model-info">
+                                    <p><strong>Branch:</strong> <span id="device-branch-display">--</span></p>
                                     <p><strong>Location:</strong> <span id="device-location">--</span></p>
                                     <p><strong>Model:</strong> <span id="model-name">--</span></p>
                                     <p><strong>Firmware:</strong> <span id="firmware-version">--</span></p>
@@ -295,6 +303,13 @@
                                 <!-- Populated by JavaScript -->
                             </div>
                         </div>
+
+                        <div class="card full-width">
+                            <h4>Alert History</h4>
+                            <div class="logs-container" id="alerts-history">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Hydrograte Form Modal -->
@@ -311,12 +326,19 @@
                                     <input type="text" id="device-name" placeholder="e.g., Main Station - Downtown" required>
                                 </div>
                                 <div class="form-group">
+                                    <label for="device-branch">Branch:</label>
+                                    <select id="device-branch" required>
+                                        <option value="Barangka">Barangka</option>
+                                        <option value="Marikina">Marikina</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label for="device-loc">Location:</label>
                                     <input type="text" id="device-loc" placeholder="e.g., Downtown Area, Sector A" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="device-max-water">Max Water Level (meters):</label>
-                                    <input type="number" id="device-max-water" step="0.1" min="0.1" value="1.5" required>
+                                    <input type="number" id="device-max-water" step="0.1" min="0.1" value="18" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="device-install-date">Installation Date:</label>

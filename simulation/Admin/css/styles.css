@@ -424,6 +424,14 @@ body {
     margin-bottom: 4px;
 }
 
+.stat-label-sub {
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-left: 6px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+}
+
 .stat-value {
     font-size: 32px;
     font-weight: 800;
@@ -508,6 +516,42 @@ body {
     background-color: #fee2e2;
     color: #991b1b;
 }
+
+/* ===== Water Level Status Legend ===== */
+.status-legend {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin: 12px 0 18px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.03);
+}
+
+.status-dot.safe { background-color: #22c55e; }
+.status-dot.warning { background-color: #f59e0b; }
+.status-dot.critical { background-color: #ef4444; }
 
 /* ===== Filter & Tables ===== */
 .filter-bar {

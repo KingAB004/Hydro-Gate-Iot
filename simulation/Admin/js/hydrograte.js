@@ -1,9 +1,188 @@
 // ===== Hydrograte Status & Model =====
 let hydrogrates = []; // Now populated from Firestore
 
+// Water level scale + thresholds (meters)
+// Dam range is 0–18m, so 12m should be Normal.
+const WATER_LEVEL_SCALE_MAX_M = 18;
+const WATER_LEVEL_THRESHOLDS_M = {
+    lowWarningM: 4,
+    lowCriticalM: 2,
+    highWarningM: 15,
+    highCriticalM: 18
+};
+
+const ALERT_COOLDOWN_MS = 2 * 60 * 1000;
+const __lastAlertStateByDevice = Object.create(null);
+
+let __deviceRtdbRefs = Object.create(null);
+let __pendingListRerender = false;
+
+let __selectedRtdbRef = null;
+
 let nextHydrograteId = 3;
 let selectedHydrograteId = 1;
 let hydrograteData = hydrogrates[0];
+
+function clampNumber(num, min, max) {
+    const n = Number(num);
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+}
+
+function computeWaterPercent(waterLevelM, maxWaterLevelM) {
+    const max = Number(maxWaterLevelM) || 0;
+    if (max <= 0) return 0;
+    return clampNumber((Number(waterLevelM) / max) * 100, 0, 100);
+}
+
+function inferBranchFromLocation(location) {
+    const text = (location || '').toString().toLowerCase();
+    if (text.includes('marikina')) return 'Marikina';
+    if (text.includes('barangka')) return 'Barangka';
+    return 'Barangka';
+}
+
+function getWaterStateFromMeters(waterLevelM) {
+    const m = Number(waterLevelM) || 0;
+    const t = WATER_LEVEL_THRESHOLDS_M;
+
+    const isLowCritical = m <= t.lowCriticalM;
+    const isLowWarning = m <= t.lowWarningM;
+    const isHighCritical = m >= t.highCriticalM;
+    const isHighWarning = m >= t.highWarningM;
+
+    if (isLowCritical || isHighCritical) {
+        return {
+            label: 'Critical',
+            severity: 'critical',
+            badgeClass: 'badge-danger',
+            dotClass: 'critical',
+            direction: isHighCritical ? 'high' : 'low'
+        };
+    }
+
+    if (isLowWarning || isHighWarning) {
+        return {
+            label: 'Warning',
+            severity: 'warning',
+            badgeClass: 'badge-warning',
+            dotClass: 'warning',
+            direction: isHighWarning ? 'high' : 'low'
+        };
+    }
+
+    return {
+        label: 'Safe',
+        severity: 'safe',
+        badgeClass: 'badge-success',
+        dotClass: 'safe',
+        direction: 'normal'
+    };
+}
+
+function scheduleHydrogratesListRender() {
+    if (__pendingListRerender) return;
+    __pendingListRerender = true;
+    window.setTimeout(function() {
+        __pendingListRerender = false;
+        renderHydrogratesList();
+        if (typeof window.updateStats === 'function') window.updateStats();
+    }, 150);
+}
+
+async function recordWaterAlertIfNeeded(device, percent, waterLevelM, state) {
+    if (!device || !device.id) return;
+    if (!window.firestoreDb) return;
+    if (!state || (state.severity !== 'warning' && state.severity !== 'critical')) return;
+
+    const now = Date.now();
+    const last = __lastAlertStateByDevice[device.id] || {};
+    const changed = last.severity !== state.severity || last.direction !== state.direction;
+    const cooledDown = !last.atMs || (now - last.atMs) >= ALERT_COOLDOWN_MS;
+
+    if (!changed && !cooledDown) return;
+
+    __lastAlertStateByDevice[device.id] = { severity: state.severity, direction: state.direction, atMs: now };
+
+    try {
+        await window.firestoreDb.collection('alerts').add({
+            deviceId: device.id,
+            deviceName: device.name || 'Unknown Device',
+            location: device.location || '',
+            direction: state.direction, // high | low
+            severity: state.severity,   // warning | critical
+            waterLevelPercent: Math.round(percent),
+            waterLevelM: Number(waterLevelM) || 0,
+            maxWaterLevelM: WATER_LEVEL_SCALE_MAX_M,
+            triggeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+            triggeredAtMs: now
+        });
+    } catch (err) {
+        console.error('Failed to record water alert:', err);
+    }
+}
+
+function initAlertHistoryPanel() {
+    const container = document.getElementById('alerts-history');
+    if (!container) return;
+    if (!window.firestoreDb) return;
+
+    window.firestoreDb
+        .collection('alerts')
+        .orderBy('triggeredAtMs', 'desc')
+        .limit(30)
+        .onSnapshot(function(snapshot) {
+            container.innerHTML = '';
+
+            if (!snapshot || snapshot.empty) {
+                const empty = document.createElement('div');
+                empty.className = 'log-entry success';
+                empty.innerHTML = '<div><strong>No alerts yet</strong></div><div class="log-timestamp">Water level is stable</div>';
+                container.appendChild(empty);
+                window.__activeWaterAlertsCount = 0;
+                if (typeof window.updateStats === 'function') window.updateStats();
+                return;
+            }
+
+            const entries = [];
+            snapshot.forEach(function(doc) {
+                entries.push(doc.data() || {});
+            });
+
+            entries.forEach(function(a) {
+                const whenMs = (typeof a.triggeredAtMs === 'number') ? a.triggeredAtMs : Date.now();
+                const deviceLabel = (a.deviceName || a.deviceId || 'Device').toString();
+                const where = (a.location || '').toString().trim();
+                const directionText = a.direction === 'low' ? 'too low' : 'too high';
+                const sev = (a.severity || 'warning').toString();
+                const percentText = (typeof a.waterLevelPercent === 'number') ? (a.waterLevelPercent + '%') : '';
+                const metersText = (typeof a.waterLevelM === 'number') ? (a.waterLevelM.toFixed(2) + 'm') : '';
+
+                const entry = document.createElement('div');
+                entry.className = 'log-entry ' + (sev === 'critical' ? 'error' : '');
+                const title = sev === 'critical' ? 'Critical' : 'Warning';
+
+                entry.innerHTML =
+                    '<div><strong>' + title + ':</strong> ' +
+                        deviceLabel +
+                            (where ? (' — ' + where) : '') +
+                        ' — Water ' + directionText +
+                        ((metersText || percentText) ? (' (' + [metersText, percentText].filter(Boolean).join(', ') + ')') : '') +
+                    '</div>' +
+                    '<div class="log-timestamp">' + new Date(whenMs).toLocaleString() + '</div>';
+
+                container.appendChild(entry);
+            });
+
+            // Active alerts = number of devices currently in Warning/Critical
+            const activeCount = hydrogrates.reduce(function(acc, d) {
+                const st = getWaterStateFromMeters(d.waterLevel);
+                return acc + ((st.severity === 'warning' || st.severity === 'critical') ? 1 : 0);
+            }, 0);
+            window.__activeWaterAlertsCount = activeCount;
+            if (typeof window.updateStats === 'function') window.updateStats();
+        });
+}
 
 // Init Hydrograte Status
 function initHydrograteStatus() {
@@ -16,6 +195,7 @@ function initHydrograteStatus() {
                 hydrogrates.push({
                     id: doc.id,
                     name: data.name || 'Unnamed Device',
+                    branch: data.branch || inferBranchFromLocation(data.location),
                     location: data.location || 'Unknown Location',
                     status: data.status || 'Online',
                     responseTime: data.responseTime || 0,
@@ -25,7 +205,7 @@ function initHydrograteStatus() {
                     serial: data.serial || doc.id,
                     sensors: data.sensors || 0,
                     waterLevel: 0.0, // Will be updated by RTDB
-                    maxWaterLevel: data.maxWaterLevel || 1.5,
+                    maxWaterLevel: data.maxWaterLevel || WATER_LEVEL_SCALE_MAX_M,
                     installationDate: data.installationDate || 'N/A',
                     lastCalibration: data.lastCalibration || 'N/A',
                     nextCalibration: data.nextCalibration || 'N/A',
@@ -39,18 +219,28 @@ function initHydrograteStatus() {
             
             renderHydrogratesList();
             syncWithRTDB();
+            syncAllDevicesWithRTDB();
         });
     }
 
     renderHydrogratesList();
     renderHydrograteStatus();
     attachHydrograteEventListeners();
+
+    // Smart alert history panel (Firestore-backed)
+    initAlertHistoryPanel();
 }
 
 // Sync selected device with Realtime Database
 function syncWithRTDB() {
     if (window.db && selectedHydrograteId) {
+        if (__selectedRtdbRef) {
+            try { __selectedRtdbRef.off(); } catch (_) {}
+        }
+
         const floodRef = window.db.ref('flood_monitoring/' + selectedHydrograteId);
+        __selectedRtdbRef = floodRef;
+
         floodRef.on('value', function(snapshot) {
             if (snapshot.exists()) {
                 const data = snapshot.val();
@@ -73,6 +263,8 @@ function syncWithRTDB() {
                     
                     hydrograteData = current;
                     renderHydrograteStatus();
+
+                    scheduleHydrogratesListRender();
                     
                     if (typeof window.updateStats === 'function') {
                         window.updateStats();
@@ -81,6 +273,56 @@ function syncWithRTDB() {
             }
         });
     }
+}
+
+// Sync all devices with RTDB for real-time list + alert generation
+function syncAllDevicesWithRTDB() {
+    if (!window.db) return;
+
+    // Detach refs that no longer exist
+    Object.keys(__deviceRtdbRefs).forEach(function(deviceId) {
+        if (!hydrogrates.find(function(d) { return d.id === deviceId; })) {
+            try { __deviceRtdbRefs[deviceId].off(); } catch (_) {}
+            delete __deviceRtdbRefs[deviceId];
+        }
+    });
+
+    hydrogrates.forEach(function(device) {
+        if (!device || !device.id) return;
+        if (__deviceRtdbRefs[device.id]) return;
+
+        const ref = window.db.ref('flood_monitoring/' + device.id);
+        __deviceRtdbRefs[device.id] = ref;
+
+        ref.on('value', function(snapshot) {
+            if (!snapshot.exists()) return;
+            const data = snapshot.val() || {};
+
+            const target = hydrogrates.find(function(d) { return d.id === device.id; });
+            if (!target) return;
+
+            target.waterLevel = data.water_level_m || 0;
+            target.lastPing = data.last_updated || target.lastPing;
+
+            const pct = computeWaterPercent(target.waterLevel, WATER_LEVEL_SCALE_MAX_M);
+            const state = getWaterStateFromMeters(target.waterLevel);
+            recordWaterAlertIfNeeded(target, pct, target.waterLevel, state);
+
+            // Keep selected panel in sync even when list listener fires
+            if (selectedHydrograteId === target.id) {
+                hydrograteData = target;
+                renderHydrograteStatus();
+            }
+
+            // Update active alerts count for overview
+            const activeCount = hydrogrates.reduce(function(acc, d) {
+                const st = getWaterStateFromMeters(d.waterLevel);
+                return acc + ((st.severity === 'warning' || st.severity === 'critical') ? 1 : 0);
+            }, 0);
+            window.__activeWaterAlertsCount = activeCount;
+            scheduleHydrogratesListRender();
+        });
+    });
 }
 
 // Attach event listeners
@@ -146,7 +388,8 @@ function renderHydrogratesList() {
     container.innerHTML = '';
 
     hydrogrates.forEach(function(device) {
-        const waterPercent = (device.waterLevel / device.maxWaterLevel) * 100;
+        const waterState = getWaterStateFromMeters(device.waterLevel);
+        const waterMeters = Number(device.waterLevel) || 0;
         let statusClass = 'badge-success';
         if (device.status === 'Offline') statusClass = 'badge-danger';
         if (device.status === 'Maintenance') statusClass = 'badge-warning';
@@ -167,11 +410,14 @@ function renderHydrogratesList() {
             '<div class="device-card-body">' +
                 '<div class="device-metric">' +
                     '<span class="metric-label">Water Level</span>' +
-                    '<span class="metric-value">' + Math.round(waterPercent) + '%</span>' +
+                    '<span class="metric-value">' + waterMeters.toFixed(2) + 'm</span>' +
                 '</div>' +
                 '<div class="device-metric">' +
-                    '<span class="metric-label">Response</span>' +
-                    '<span class="metric-value">' + device.responseTime + 'ms</span>' +
+                    '<span class="metric-label">Level Status</span>' +
+                    '<span class="metric-value" style="display:inline-flex; align-items:center; gap:8px;">' +
+                        '<span class="status-dot ' + waterState.dotClass + '"></span>' +
+                        '<span>' + waterState.label + '</span>' +
+                    '</span>' +
                 '</div>' +
                 '<div class="device-metric">' +
                     '<span class="metric-label">Sensors</span>' +
@@ -220,19 +466,26 @@ function renderHydrograteStatus() {
     const lastPingEl = document.getElementById('last-ping');
     if (lastPingEl) lastPingEl.textContent = hydrograteData.lastPing;
 
-    const waterLevelPercent = (hydrograteData.waterLevel / hydrograteData.maxWaterLevel) * 100;
+    const waterLevelPercentSafe = computeWaterPercent(hydrograteData.waterLevel, WATER_LEVEL_SCALE_MAX_M);
+    const waterState = getWaterStateFromMeters(hydrograteData.waterLevel);
 
     const gaugeFill = document.getElementById('gauge-fill');
-    if (gaugeFill) gaugeFill.style.setProperty('--gauge-rotation', (waterLevelPercent * 3.6) + 'deg');
+    if (gaugeFill) gaugeFill.style.setProperty('--gauge-rotation', (waterLevelPercentSafe * 3.6) + 'deg');
 
     const gaugeText = document.getElementById('gauge-text');
-    if (gaugeText) gaugeText.textContent = Math.round(waterLevelPercent) + '%';
+    if (gaugeText) gaugeText.textContent = (Number(hydrograteData.waterLevel) || 0).toFixed(2) + 'm';
+
+    const waterStatusEl = document.getElementById('device-water-status');
+    if (waterStatusEl) {
+        waterStatusEl.textContent = waterState.label;
+        waterStatusEl.className = 'badge ' + waterState.badgeClass;
+    }
 
     const waterLevelValueEl = document.getElementById('water-level-value');
     if (waterLevelValueEl) waterLevelValueEl.textContent = hydrograteData.waterLevel.toFixed(2);
 
     const waterLevelMaxEl = document.getElementById('water-level-max');
-    if (waterLevelMaxEl) waterLevelMaxEl.textContent = hydrograteData.maxWaterLevel.toFixed(2);
+    if (waterLevelMaxEl) waterLevelMaxEl.textContent = WATER_LEVEL_SCALE_MAX_M.toFixed(2);
 
     const modelNameEl = document.getElementById('model-name');
     if (modelNameEl) modelNameEl.textContent = hydrograteData.model;
@@ -245,6 +498,9 @@ function renderHydrograteStatus() {
 
     const sensorsEl = document.getElementById('sensors-count');
     if (sensorsEl) sensorsEl.textContent = hydrograteData.sensors;
+
+    const branchDisplayEl = document.getElementById('device-branch-display');
+    if (branchDisplayEl) branchDisplayEl.textContent = hydrograteData.branch || inferBranchFromLocation(hydrograteData.location);
 
     const locationEl = document.getElementById('device-location');
     if (locationEl) locationEl.textContent = hydrograteData.location;
@@ -316,6 +572,7 @@ async function handleHydrograteFormSubmit(e) {
 
     const oldDeviceId = document.getElementById('hydrograte-id').value;
     const name = document.getElementById('device-name').value;
+    const branch = document.getElementById('device-branch').value;
     const location = document.getElementById('device-loc').value;
     const maxWaterLevel = parseFloat(document.getElementById('device-max-water').value);
     const installationDate = document.getElementById('device-install-date').value;
@@ -330,6 +587,7 @@ async function handleHydrograteFormSubmit(e) {
 
     const deviceData = {
         name: name,
+        branch: branch,
         location: location,
         maxWaterLevel: maxWaterLevel,
         installationDate: installationDate,
@@ -436,6 +694,8 @@ function editHydrograte(id) {
 
     document.getElementById('hydrograte-id').value = device.id;
     document.getElementById('device-name').value = device.name;
+    const branchEl = document.getElementById('device-branch');
+    if (branchEl) branchEl.value = device.branch || inferBranchFromLocation(device.location);
     document.getElementById('device-loc').value = device.location;
     document.getElementById('device-max-water').value = device.maxWaterLevel;
     document.getElementById('device-install-date').value = device.installationDate;
@@ -488,17 +748,15 @@ function refreshHydrograteData() {
     hydrograteData.responseTime = Math.floor(Math.random() * 200) + 50;
     hydrograteData.lastPing = 'Just now';
     
-    // Generate a random unit between 0 and 25 (simulated meters)
-    const newWaterLevel = Math.floor(Math.random() * 26); 
+    // Generate a random value between 0 and 18 (simulated meters)
+    const newWaterLevel = Math.floor(Math.random() * (WATER_LEVEL_SCALE_MAX_M + 1));
     hydrograteData.waterLevel = newWaterLevel;
 
-    // Determine status string based on 18m critical and 15m caution
+    // Determine status string based on meter thresholds
+    const state = getWaterStateFromMeters(newWaterLevel);
     let waterStatus = 'safe';
-    if (newWaterLevel >= 18) {
-        waterStatus = 'critical';
-    } else if (newWaterLevel >= 15) {
-        waterStatus = 'caution';
-    }
+    if (state.severity === 'critical') waterStatus = 'critical';
+    else if (state.severity === 'warning') waterStatus = 'caution';
 
     // Push to Firebase RTDB (direct mapping 1:1)
     if (window.db && selectedHydrograteId) {
@@ -507,7 +765,7 @@ function refreshHydrograteData() {
             water_level_m: newWaterLevel,
             water_level: waterStatus,
             last_updated: new Date().toLocaleTimeString(),
-            sensor_warning: newWaterLevel >= 24 // Warning if near max 25
+            sensor_warning: state.severity !== 'safe'
         }).then(() => {
             console.log('RTDB updated with new water level:', newWaterLevel);
         }).catch(err => {
