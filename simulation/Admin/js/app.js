@@ -6,26 +6,54 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initApp() {
-    // Initialize all sections
-    initUsersManagement();
-    initHydrograteStatus();
-    initAnnouncements();
-    if (typeof initAuditLogs === 'function') {
-        initAuditLogs();
-    }
-    if (typeof initStatistics === 'function') {
-        initStatistics();
-    }
-    setupAdminAuditLogging();
-    
-    // Setup tab navigation
+    // Setup tab navigation first so sidebar works even if other modules fail.
     setupTabNavigation();
-    
-    // Update stats
-    updateStats();
-    
+
+    const safeCall = function(label, fn) {
+        try {
+            if (typeof fn !== 'function') return;
+            const result = fn();
+            if (result && typeof result.then === 'function') {
+                result.catch(function(err) {
+                    console.error(label + ' failed:', err);
+                });
+            }
+        } catch (err) {
+            console.error(label + ' failed:', err);
+        }
+    };
+
+    // Initialize all sections (guarded so one error doesn't break everything)
+    safeCall('initAdminProfile', (typeof initAdminProfile === 'function' ? initAdminProfile : null));
+    safeCall('initUsersManagement', window.initUsersManagement || (typeof initUsersManagement === 'function' ? initUsersManagement : null));
+    safeCall('initHydrograteStatus', (typeof initHydrograteStatus === 'function' ? initHydrograteStatus : null));
+    safeCall('initAnnouncements', (typeof initAnnouncements === 'function' ? initAnnouncements : null));
+    safeCall('initAuditLogs', (typeof initAuditLogs === 'function' ? initAuditLogs : null));
+    safeCall('initStatistics', (typeof initStatistics === 'function' ? initStatistics : null));
+    safeCall('setupAdminAuditLogging', (typeof setupAdminAuditLogging === 'function' ? setupAdminAuditLogging : null));
+
+    safeCall('updateStats', (typeof updateStats === 'function' ? updateStats : null));
+
     // Setup refresh button
-    document.getElementById('refresh-btn').addEventListener('click', refreshAllData);
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) refreshBtn.addEventListener('click', refreshAllData);
+}
+
+function initAdminProfile() {
+    const nameEl = document.getElementById('admin-name');
+    const roleEl = document.getElementById('admin-role');
+
+    const auth = window.auth;
+    if (!auth) return;
+
+    auth.onAuthStateChanged(function(user) {
+        if (!user) return;
+
+        const displayName = (user.displayName || '').toString().trim();
+        const email = (user.email || '').toString().trim();
+        if (nameEl) nameEl.textContent = displayName || email || 'Admin User';
+        if (roleEl) roleEl.style.display = '';
+    });
 }
 
 function setupAdminAuditLogging() {
@@ -80,24 +108,32 @@ function setupTabNavigation() {
         button.addEventListener('click', function() {
             const tabName = this.getAttribute('data-tab');
 
+            if (!tabName) return;
+            const targetTab = document.getElementById(tabName);
+            if (!targetTab) {
+                console.warn('Tab content not found for:', tabName);
+                return;
+            }
+
             // Remove active class from all buttons and contents
             navButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
 
             // Add active class to clicked button and corresponding content
             this.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
+            targetTab.classList.add('active');
 
             // Update page title
             const titles = {
                 'overview': 'Dashboard Overview',
                 'users': 'User Management',
                 'hydrograte': 'Hydrograte Status & Model',
-                'announcements': 'Announcements & Messages',
+                'announcements': 'Communications',
                 'audit-logs': 'Audit Logs',
                 'statistics': 'System Statistics'
             };
-            document.getElementById('page-title').textContent = titles[tabName];
+            const pageTitle = document.getElementById('page-title');
+            if (pageTitle) pageTitle.textContent = titles[tabName] || 'Dashboard';
         });
     });
 }

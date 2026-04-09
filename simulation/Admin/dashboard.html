@@ -13,7 +13,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1>AFWMS</h1>
+                <h1>HydroGate</h1>
                 <p>Admin Dashboard</p>
             </div>
             <nav class="sidebar-nav">
@@ -27,7 +27,7 @@
                     <i data-lucide="droplet" class="icon"></i> Hydrograte Status
                 </button>
                 <button class="nav-btn" data-tab="announcements">
-                    <i data-lucide="megaphone" class="icon"></i> Announcements
+                    <i data-lucide="megaphone" class="icon"></i> Communications
                 </button>
                 <button class="nav-btn" data-tab="audit-logs">
                     <i data-lucide="file-text" class="icon"></i> Audit Logs
@@ -38,10 +38,15 @@
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">
-                    <div class="avatar">A</div>
+                    <div class="avatar avatar-admin" aria-label="Admin">
+                        <i data-lucide="shield-check" class="avatar-icon"></i>
+                    </div>
                     <div class="profile-info">
-                        <p class="name">Admin User</p>
-                        <p class="role">Administrator</p>
+                        <p class="name" id="admin-name">Admin User</p>
+                        <p class="role role-admin" id="admin-role">
+                            <i data-lucide="sparkles" class="role-icon"></i>
+                            Administrator
+                        </p>
                     </div>
                 </div>
             </div>
@@ -70,49 +75,46 @@
                 <section id="overview" class="tab-content active">
                     <div class="overview-grid">
                         <div class="stat-card">
-                            <div class="stat-icon">👥</div>
+                            <div class="stat-icon-wrap">
+                                <i data-lucide="users" class="stat-icon"></i>
+                            </div>
                             <div class="stat-info">
                                 <p class="stat-label">Total Users</p>
                                 <p class="stat-value" id="total-users">0</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">💧</div>
+                            <div class="stat-icon-wrap">
+                                <i data-lucide="waves" class="stat-icon"></i>
+                            </div>
                             <div class="stat-info">
                                 <p class="stat-label">Current Water Level</p>
                                 <p class="stat-value" id="water-level">0%</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-icon-wrap">
+                                <i data-lucide="triangle-alert" class="stat-icon"></i>
+                            </div>
                             <div class="stat-info">
                                 <p class="stat-label">Active Alerts</p>
                                 <p class="stat-value" id="active-alerts">0</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">📢</div>
+                            <div class="stat-icon-wrap">
+                                <i data-lucide="mail" class="stat-icon"></i>
+                            </div>
                             <div class="stat-info">
                                 <p class="stat-label">Pending Messages</p>
                                 <p class="stat-value" id="pending-messages">0</p>
                             </div>
                         </div>
                     </div>
+
                     <div class="recent-activity">
-                        <h3>System Analytics & Status</h3>
-                        <div class="analytics-container" style="margin-top: 20px; background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h4 style="font-weight: 500; font-size: 16px;">Water Level Trends</h4>
-                                <select id="chart-timeframe" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; outline: none; cursor: pointer;">
-                                    <option value="today">Today</option>
-                                    <option value="weekly">This Week</option>
-                                </select>
-                            </div>
-                            <div style="height: 300px; width: 100%;">
-                                <canvas id="waterLevelChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="status-box" style="margin-top: 20px;">
+                        <h3>System Status</h3>
+                        <div class="status-box">
                             <p><strong>Hydrograte Status:</strong> <span id="status-hydrograte" class="badge-success">Online</span></p>
                             <p><strong>Last Updated:</strong> <span id="status-updated">--</span></p>
                             <p><strong>System Health:</strong> <span id="status-health" class="badge-success">Healthy</span></p>
@@ -338,53 +340,18 @@
                 <!-- Announcements Tab -->
                 <section id="announcements" class="tab-content">
                     <div class="section-header">
-                        <h3>Announcements & Messages</h3>
-                        <button class="btn btn-primary" id="new-announcement-btn">+ New Announcement</button>
+                        <h3>Communications</h3>
+                        <button class="btn btn-primary" id="new-announcement-btn">
+                            <i data-lucide="plus"></i> Create Announcement
+                        </button>
                     </div>
 
-                    <!-- Create Announcement Form -->
-                    <div id="announcement-form-container" class="card" style="display: none;">
-                        <h4>Create New Announcement</h4>
-                        <form id="announcement-form">
-                            <div class="form-group">
-                                <label for="announcement-title">Title:</label>
-                                <input type="text" id="announcement-title" required>
+                    <div class="announcement-layout">
+                        <div class="announcements-feed">
+                            <div id="announcements-list" class="announcements-stack">
+                                <!-- Populated by JavaScript -->
                             </div>
-                            <div class="form-group">
-                                <label for="announcement-message">Message:</label>
-                                <textarea id="announcement-message" rows="4" required></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="announcement-type">Type:</label>
-                                <select id="announcement-type">
-                                    <option value="Info">Information</option>
-                                    <option value="Alert">Alert</option>
-                                    <option value="Warning">Warning</option>
-                                    <option value="Emergency">Emergency</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="announcement-audience">Target Audience:</label>
-                                <div class="checkbox-group">
-                                    <label><input type="checkbox" value="Admin" checked> Admin</label>
-                                    <label><input type="checkbox" value="LGU" checked> LGU</label>
-                                    <label><input type="checkbox" value="Homeowner"> Homeowner</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label><input type="checkbox" id="schedule-announcement"> Schedule for later</label>
-                                <input type="datetime-local" id="schedule-time" style="display: none;">
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">Send Announcement</button>
-                                <button type="button" class="btn btn-secondary" id="cancel-announcement">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Announcements List -->
-                    <div class="announcements-container" id="announcements-list">
-                        <!-- Populated by JavaScript -->
+                        </div>
                     </div>
                 </section>
 
@@ -453,6 +420,72 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- Announcement Modal -->
+    <div id="announcement-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>New Announcement</h3>
+                <button class="close-btn" id="close-announcement-modal">&times;</button>
+            </div>
+            <form id="announcement-form">
+                <div class="form-group">
+                    <label for="announcement-title">Subject</label>
+                    <input type="text" id="announcement-title" placeholder="e.g. Maintenance Alert" required>
+                </div>
+                <div class="form-group">
+                    <label for="announcement-message">Content</label>
+                    <textarea id="announcement-message" rows="5" placeholder="Write your message here..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="announcement-type">Urgency Level</label>
+                    <select id="announcement-type">
+                        <option value="Info">Information (Blue)</option>
+                        <option value="Alert">Alert (Yellow)</option>
+                        <option value="Warning">Warning (Orange)</option>
+                        <option value="Emergency">Emergency (Red)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Recipient Groups</label>
+                    <div class="audience-toggles checkbox-stack" aria-label="Recipient Groups">
+                        <label class="audience-pill" data-role="Admin">
+                            <input type="checkbox" value="Admin" checked>
+                            <span class="pill-content">
+                                <i data-lucide="shield-check" class="pill-icon"></i>
+                                <span class="pill-text">ADMIN</span>
+                            </span>
+                        </label>
+                        <label class="audience-pill" data-role="LGU">
+                            <input type="checkbox" value="LGU" checked>
+                            <span class="pill-content">
+                                <i data-lucide="landmark" class="pill-icon"></i>
+                                <span class="pill-text">LGU</span>
+                            </span>
+                        </label>
+                        <label class="audience-pill" data-role="Homeowner">
+                            <input type="checkbox" value="Homeowner">
+                            <span class="pill-content">
+                                <i data-lucide="home" class="pill-icon"></i>
+                                <span class="pill-text">HOMEOWNER</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="schedule-announcement"> 
+                        <span>Schedule for later</span>
+                    </label>
+                    <input type="datetime-local" id="schedule-time" class="datetime-minimal" style="display: none;">
+                </div>
+                <div class="form-actions-stacked">
+                    <button type="submit" class="btn btn-primary btn-full">Post Announcement</button>
+                    <button type="button" class="btn btn-secondary btn-full" id="cancel-announcement">Discard</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Firebase Scripts (Compat Version for file:// support) -->

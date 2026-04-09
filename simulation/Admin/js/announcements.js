@@ -2,6 +2,7 @@
 
 let announcements = [];
 let hasShownAnnouncementPermissionWarning = false;
+let hasShownAnnouncementInitWarning = false;
 
 // Initialize Announcements
 window.initAnnouncements = async function() {
@@ -12,6 +13,14 @@ window.initAnnouncements = async function() {
 // Fetch Announcements from Firestore
 async function fetchAnnouncements() {
     const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) {
+        if (!hasShownAnnouncementInitWarning) {
+            hasShownAnnouncementInitWarning = true;
+            alert('Firestore is not initialized. Please reload the page.');
+        }
+        console.error('Firestore is not initialized (window.firestoreDb missing).');
+        return;
+    }
     try {
         const snapshot = await firestoreDb.collection('announcements').orderBy('timestamp', 'desc').get();
         announcements = [];
@@ -53,12 +62,23 @@ function attachAnnouncementEventListeners() {
     const newAnnouncementBtn = document.getElementById('new-announcement-btn');
     const announcementForm = document.getElementById('announcement-form');
     const cancelAnnouncementBtn = document.getElementById('cancel-announcement');
+    const closeAnnouncementModalBtn = document.getElementById('close-announcement-modal');
+    const announcementModal = document.getElementById('announcement-modal');
     const scheduleCheckbox = document.getElementById('schedule-announcement');
     const scheduleTimeInput = document.getElementById('schedule-time');
 
-    if (newAnnouncementBtn) newAnnouncementBtn.addEventListener('click', toggleAnnouncementForm);
+    if (newAnnouncementBtn) newAnnouncementBtn.addEventListener('click', openAnnouncementModal);
     if (announcementForm) announcementForm.addEventListener('submit', handleAnnouncementSubmit);
-    if (cancelAnnouncementBtn) cancelAnnouncementBtn.addEventListener('click', toggleAnnouncementForm);
+    if (cancelAnnouncementBtn) cancelAnnouncementBtn.addEventListener('click', closeAnnouncementModal);
+    if (closeAnnouncementModalBtn) closeAnnouncementModalBtn.addEventListener('click', closeAnnouncementModal);
+
+    if (announcementModal) {
+        announcementModal.addEventListener('click', function(event) {
+            if (event.target === announcementModal) {
+                closeAnnouncementModal();
+            }
+        });
+    }
     
     if (scheduleCheckbox) {
         scheduleCheckbox.addEventListener('change', () => {
@@ -69,16 +89,23 @@ function attachAnnouncementEventListeners() {
     }
 }
 
-function toggleAnnouncementForm() {
-    const formContainer = document.getElementById('announcement-form-container');
-    if (formContainer) {
-        formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-        if (formContainer.style.display === 'block') {
-            document.getElementById('announcement-form').reset();
-            const scheduleTimeInput = document.getElementById('schedule-time');
-            if (scheduleTimeInput) scheduleTimeInput.style.display = 'none';
-        }
-    }
+function openAnnouncementModal() {
+    const modal = document.getElementById('announcement-modal');
+    if (!modal) return;
+    modal.classList.add('active');
+
+    if (window.lucide) window.lucide.createIcons();
+
+    const form = document.getElementById('announcement-form');
+    if (form) form.reset();
+    const scheduleTimeInput = document.getElementById('schedule-time');
+    if (scheduleTimeInput) scheduleTimeInput.style.display = 'none';
+}
+
+function closeAnnouncementModal() {
+    const modal = document.getElementById('announcement-modal');
+    if (!modal) return;
+    modal.classList.remove('active');
 }
 
 async function handleAnnouncementSubmit(e) {
@@ -95,7 +122,7 @@ async function handleAnnouncementSubmit(e) {
     }
     
     // Get audience
-    const audienceCheckboxes = document.querySelectorAll('#announcement-form .checkbox-group input');
+    const audienceCheckboxes = document.querySelectorAll('.checkbox-stack input');
     const audience = [];
     audienceCheckboxes.forEach(checkbox => {
         if (checkbox.checked) {
@@ -115,11 +142,12 @@ async function handleAnnouncementSubmit(e) {
 
     try {
         console.log("Submitting announcement: ", newAnnouncementData);
-        if (!firebase.firestore.FieldValue) {
-            console.error("Firebase FieldValue is missing!");
-        }
-        
         const firestoreDb = window.firestoreDb;
+        if (!firestoreDb) {
+            alert('Firestore is not initialized. Please reload the page.');
+            console.error('Firestore is not initialized (window.firestoreDb missing).');
+            return;
+        }
         const docRef = await firestoreDb.collection('announcements').add(newAnnouncementData);
         console.log("Announcement added with ID: ", docRef.id);
 
@@ -132,7 +160,7 @@ async function handleAnnouncementSubmit(e) {
         }
         
         alert(`Announcement ${schedule ? 'scheduled' : 'sent'} successfully!`);
-        toggleAnnouncementForm();
+        closeAnnouncementModal();
         await fetchAnnouncements(); // Refresh list automatically
     } catch (error) {
         console.error("Error adding announcement: ", error);
@@ -148,58 +176,63 @@ function renderAnnouncements() {
     container.innerHTML = '';
 
     if (announcements.length === 0) {
-        container.innerHTML = '<p>No announcements yet.</p>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <i data-lucide="message-square-off"></i>
+                <p>No communications found in the feed.</p>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
         return;
     }
 
     announcements.forEach(announcement => {
         const card = document.createElement('div');
-        card.className = 'card announcement-card';
+        card.className = 'announcement-card fade-in ' + announcement.type.toLowerCase();
         
-        let typeClass = '';
-        switch(announcement.type.toLowerCase()) {
-            case 'emergency': 
-            case 'danger': typeClass = 'badge-danger'; break;
-            case 'warning': typeClass = 'badge-warning'; break;
-            case 'info': typeClass = 'badge-success'; break;
-            default: typeClass = 'badge-success';
-        }
-
         const dateStr = announcement.timestamp instanceof Date 
-            ? announcement.timestamp.toLocaleString() 
-            : new Date(announcement.timestamp).toLocaleString();
+            ? announcement.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : new Date(announcement.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-        const badgeHtml = announcement.status === 'Sent' ? '<span class="status-badge success">Sent</span>' : '<span class="status-badge warning">Scheduled</span>';
+        const isToday = new Date().toDateString() === (announcement.timestamp instanceof Date ? announcement.timestamp.toDateString() : new Date(announcement.timestamp).toDateString());
+        const timeDisplay = isToday ? 'Today, ' + dateStr.split(', ')[1] : dateStr;
 
-        let tagsHtml = '';
-        announcement.audience.forEach(a => {
-            tagsHtml += `<span class="tag">${a}</span>`;
-        });
+        const audienceTags = announcement.audience.map(a => `<span class="badge ${a === 'Admin' ? 'badge-info' : 'badge-secondary'}">${a}</span>`).join(' ');
 
         card.innerHTML = `
+            <div class="announcement-status-line"></div>
             <div class="announcement-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <h4>${announcement.title}</h4>
-                    <span class="${typeClass}">${announcement.type}</span>
+                <div class="header-main">
+                    <h4 class="announcement-title">${announcement.title}</h4>
+                    <div class="announcement-meta">
+                        <span class="meta-sender">${announcement.sender}</span>
+                        <div class="meta-dot"></div>
+                        <span class="meta-time">${timeDisplay}</span>
+                    </div>
                 </div>
-                ${badgeHtml}
+                <div class="announcement-badges">
+                    <span class="badge ${announcement.status === 'Sent' ? 'badge-success' : 'badge-warning'}">${announcement.status}</span>
+                </div>
             </div>
             <p class="announcement-message">${announcement.message}</p>
             <div class="announcement-footer">
-                <div class="audience-tags">
-                    ${tagsHtml}
+                <div class="audience-list">
+                    ${audienceTags}
                 </div>
-                <div class="announcement-meta">
-                    <span>Sent by: ${announcement.sender}</span>
-                    <span>${dateStr}</span>
+                <div class="announcement-actions">
+                    <button class="btn btn-ghost" onclick="alert('Feature coming soon')">
+                        <i data-lucide="edit-3"></i>
+                    </button>
+                    <button class="btn btn-ghost btn-ghost-danger" onclick="window.deleteAnnouncement('${announcement.id}', '${announcement.title.replace(/'/g, "\\'")}')">
+                        <i data-lucide="trash-2"></i>
+                    </button>
                 </div>
-            </div>
-            <div class="announcement-actions">
-                <button class="btn-delete-announcement" onclick="window.deleteAnnouncement('${announcement.id}', '${announcement.title.replace(/'/g, "\\'")}')">Delete</button>
             </div>
         `;
         container.appendChild(card);
     });
+
+    if (window.lucide) window.lucide.createIcons();
 }
 
 window.deleteAnnouncement = async function(id, title) {
