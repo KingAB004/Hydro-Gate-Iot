@@ -197,7 +197,24 @@ function renderAnnouncements() {
         const isToday = new Date().toDateString() === (announcement.timestamp instanceof Date ? announcement.timestamp.toDateString() : new Date(announcement.timestamp).toDateString());
         const timeDisplay = isToday ? 'Today, ' + dateStr.split(', ')[1] : dateStr;
 
-        const audienceTags = announcement.audience.map(a => `<span class="badge ${a === 'Admin' ? 'badge-info' : 'badge-secondary'}">${a}</span>`).join(' ');
+        const getAudienceIcon = function(role) {
+            if (role === 'Admin') return 'shield-check';
+            if (role === 'LGU') return 'landmark';
+            if (role === 'Homeowner') return 'home';
+            return 'users';
+        };
+
+        const audienceTags = (announcement.audience || []).map(function(role) {
+            const safeRole = (role || '').toString();
+            const label = safeRole.toUpperCase();
+            const icon = getAudienceIcon(safeRole);
+            return `
+                <span class="audience-chip" data-role="${safeRole}">
+                    <i data-lucide="${icon}" class="pill-icon"></i>
+                    <span class="pill-text">${label}</span>
+                </span>
+            `;
+        }).join('');
 
         card.innerHTML = `
             <div class="announcement-status-line"></div>

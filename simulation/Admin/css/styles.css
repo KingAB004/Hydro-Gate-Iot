@@ -1109,6 +1109,34 @@ body {
     border-top: 1px solid #f1f5f9;
 }
 
+.audience-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.audience-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--text-secondary);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.audience-chip[data-role="Admin"] {
+    background: color-mix(in srgb, var(--primary-color) 12%, #ffffff);
+    border-color: color-mix(in srgb, var(--primary-color) 28%, var(--border-color));
+    color: var(--text-primary);
+}
+
 .announcement-actions {
     display: flex;
     gap: 8px;
