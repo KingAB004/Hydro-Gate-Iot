@@ -6,6 +6,8 @@ const maxDataPoints = 20;
 let waterLevelHistory = [];
 let timeLabels = [];
 
+const DAM_WATER_LEVEL_MAX_M = 18;
+
 function initStatistics() {
     console.log('Initializing Statistics...');
     initLiveChart();
@@ -50,9 +52,13 @@ function initLiveChart() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 2.0,
+                    min: 0,
+                    max: DAM_WATER_LEVEL_MAX_M,
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { callback: value => value + 'm' }
+                    ticks: {
+                        stepSize: 2,
+                        callback: value => value + 'm'
+                    }
                 },
                 x: {
                     grid: { display: false }
@@ -88,7 +94,13 @@ function initHistoryChart() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)' }
+                    min: 0,
+                    max: DAM_WATER_LEVEL_MAX_M,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        stepSize: 2,
+                        callback: value => value + 'm'
+                    }
                 },
                 x: {
                     grid: { display: false }
@@ -129,14 +141,30 @@ function updateHistoricalData(timeframe) {
     historyChart.update();
 }
 
+function extractWaterLevelMeters(data) {
+    if (!data) return null;
+
+    if (typeof data.water_level_m === 'number') return data.water_level_m;
+
+    // If flood_monitoring contains multiple devices: { id1: { water_level_m }, id2: ... }
+    if (typeof data === 'object') {
+        const keys = Object.keys(data);
+        for (let i = 0; i < keys.length; i++) {
+            const row = data[keys[i]];
+            if (row && typeof row.water_level_m === 'number') return row.water_level_m;
+        }
+    }
+
+    return null;
+}
+
 function listenToWaterLevelChanges() {
     if (!window.db) return;
 
     window.db.ref('flood_monitoring').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.water_level_m !== undefined) {
-            updateLiveChart(data.water_level_m);
-        }
+        const value = extractWaterLevelMeters(snapshot.val());
+        if (value === null) return;
+        updateLiveChart(value);
     });
 }
 

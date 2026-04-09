@@ -59,14 +59,6 @@
                 <div class="header-left">
                     <h2 id="page-title">Dashboard Overview</h2>
                 </div>
-                <div class="header-right">
-                    <button class="btn-icon" id="refresh-btn" title="Refresh Data">
-                        <i data-lucide="refresh-cw"></i>
-                    </button>
-                    <button class="btn-icon" id="settings-btn" title="Settings">
-                        <i data-lucide="settings"></i>
-                    </button>
-                </div>
             </header>
 
             <!-- Tabs Content -->
@@ -343,9 +335,14 @@
                 <section id="announcements" class="tab-content">
                     <div class="section-header">
                         <h3>Communications</h3>
-                        <button class="btn btn-primary" id="new-announcement-btn">
-                            <i data-lucide="plus"></i> Create Announcement
-                        </button>
+                        <div class="section-actions-stack" aria-label="Communication actions">
+                            <button class="btn btn-primary" id="new-announcement-btn">
+                                <i data-lucide="plus"></i> Create Announcement
+                            </button>
+                            <button class="btn btn-danger" id="delete-all-announcements-btn" title="Delete all announcements">
+                                <i data-lucide="trash-2"></i> Delete All
+                            </button>
+                        </div>
                     </div>
 
                     <div class="filter-bar" aria-label="Announcement filters">
@@ -500,6 +497,37 @@
                     <button type="button" class="btn btn-secondary btn-full" id="cancel-announcement">Discard</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Delete All Announcements Modal -->
+    <div id="delete-all-announcements-modal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Delete All Announcements</h3>
+                <button class="close-btn" id="close-delete-all-announcements-modal">&times;</button>
+            </div>
+
+            <p class="modal-subtext">
+                This will permanently delete <strong><span id="delete-all-announcements-count">0</span></strong> announcement(s).
+            </p>
+
+            <div class="form-group">
+                <label for="delete-all-announcements-confirm">Type DELETE to confirm</label>
+                <input
+                    type="text"
+                    id="delete-all-announcements-confirm"
+                    placeholder="DELETE"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-delete-all-announcements">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-all-announcements" disabled>
+                    <i data-lucide="trash-2"></i> Delete All
+                </button>
+            </div>
         </div>
     </div>
 

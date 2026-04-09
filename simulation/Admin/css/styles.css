@@ -309,6 +309,16 @@ body {
     border-color: var(--primary-color);
 }
 
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+}
+
 /* ===== Cards ===== */
 .card {
     background-color: #ffffff;
@@ -329,16 +339,33 @@ body {
 
 .section-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 32px;
 }
 
 .section-header h3 {
-    color: var(--text-primary);
-    font-weight: 800;
-    font-size: 28px;
-    letter-spacing: -0.04em;
+    display: none;
+}
+
+.section-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    min-width: 240px;
+}
+
+.section-actions-stack .btn {
+    width: 100%;
+    justify-content: center;
+}
+
+@media (max-width: 720px) {
+    .section-actions-stack {
+        min-width: 0;
+        width: 100%;
+    }
 }
 
 /* ===== Overview Grid ===== */
@@ -577,8 +604,8 @@ body {
 }
 
 .data-table thead {
-    background-color: #f8fafc;
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--primary-color);
+    border-bottom: 1px solid color-mix(in srgb, var(--primary-color) 70%, #000000);
 }
 
 .data-table th {
@@ -586,7 +613,7 @@ body {
     text-align: left;
     font-size: 12px;
     font-weight: 800;
-    color: var(--text-secondary);
+    color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -1270,6 +1297,14 @@ body {
     font-size: 24px;
     font-weight: 800;
     letter-spacing: -0.04em;
+}
+
+.modal-subtext {
+    margin: 0 0 24px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
 }
 
 .close-btn {

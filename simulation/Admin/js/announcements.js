@@ -89,6 +89,7 @@ function handleAnnouncementPermissionError(error) {
 
 function attachAnnouncementEventListeners() {
     const newAnnouncementBtn = document.getElementById('new-announcement-btn');
+    const deleteAllBtn = document.getElementById('delete-all-announcements-btn');
     const announcementForm = document.getElementById('announcement-form');
     const cancelAnnouncementBtn = document.getElementById('cancel-announcement');
     const closeAnnouncementModalBtn = document.getElementById('close-announcement-modal');
@@ -100,7 +101,14 @@ function attachAnnouncementEventListeners() {
     const announcementAudienceFilter = document.getElementById('announcement-audience-filter');
     const announcementStatusFilter = document.getElementById('announcement-status-filter');
 
+    const deleteAllModal = document.getElementById('delete-all-announcements-modal');
+    const closeDeleteAllModalBtn = document.getElementById('close-delete-all-announcements-modal');
+    const cancelDeleteAllBtn = document.getElementById('cancel-delete-all-announcements');
+    const confirmDeleteAllBtn = document.getElementById('confirm-delete-all-announcements');
+    const deleteAllConfirmInput = document.getElementById('delete-all-announcements-confirm');
+
     if (newAnnouncementBtn) newAnnouncementBtn.addEventListener('click', openAnnouncementModal);
+    if (deleteAllBtn) deleteAllBtn.addEventListener('click', openDeleteAllAnnouncementsModal);
     if (announcementForm) announcementForm.addEventListener('submit', handleAnnouncementSubmit);
     if (cancelAnnouncementBtn) cancelAnnouncementBtn.addEventListener('click', closeAnnouncementModal);
     if (closeAnnouncementModalBtn) closeAnnouncementModalBtn.addEventListener('click', closeAnnouncementModal);
@@ -124,6 +132,114 @@ function attachAnnouncementEventListeners() {
     if (announcementSearch) announcementSearch.addEventListener('input', applyAnnouncementFilters);
     if (announcementAudienceFilter) announcementAudienceFilter.addEventListener('change', applyAnnouncementFilters);
     if (announcementStatusFilter) announcementStatusFilter.addEventListener('change', applyAnnouncementFilters);
+
+    if (deleteAllModal) {
+        deleteAllModal.addEventListener('click', function(event) {
+            if (event.target === deleteAllModal) {
+                closeDeleteAllAnnouncementsModal();
+            }
+        });
+    }
+
+    if (closeDeleteAllModalBtn) closeDeleteAllModalBtn.addEventListener('click', closeDeleteAllAnnouncementsModal);
+    if (cancelDeleteAllBtn) cancelDeleteAllBtn.addEventListener('click', closeDeleteAllAnnouncementsModal);
+    if (confirmDeleteAllBtn) confirmDeleteAllBtn.addEventListener('click', deleteAllAnnouncementsInternal);
+
+    if (deleteAllConfirmInput && confirmDeleteAllBtn) {
+        const syncConfirmState = function() {
+            const ok = (deleteAllConfirmInput.value || '').trim().toUpperCase() === 'DELETE';
+            confirmDeleteAllBtn.disabled = !ok;
+        };
+        deleteAllConfirmInput.addEventListener('input', syncConfirmState);
+        syncConfirmState();
+    }
+}
+
+function openDeleteAllAnnouncementsModal() {
+    const modal = document.getElementById('delete-all-announcements-modal');
+    if (!modal) return;
+
+    const countEl = document.getElementById('delete-all-announcements-count');
+    if (countEl) countEl.textContent = String(Array.isArray(announcements) ? announcements.length : 0);
+
+    const input = document.getElementById('delete-all-announcements-confirm');
+    if (input) input.value = '';
+
+    const confirmBtn = document.getElementById('confirm-delete-all-announcements');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    if (window.lucide) window.lucide.createIcons();
+
+    if (input) input.focus();
+}
+
+function closeDeleteAllAnnouncementsModal() {
+    const modal = document.getElementById('delete-all-announcements-modal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+async function deleteAllAnnouncementsInternal() {
+    const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) {
+        alert('Firestore is not initialized. Please reload the page.');
+        return;
+    }
+
+    const typed = (document.getElementById('delete-all-announcements-confirm')?.value || '').trim().toUpperCase();
+    if (typed !== 'DELETE') return;
+
+    const confirmBtn = document.getElementById('confirm-delete-all-announcements');
+    const cancelBtn = document.getElementById('cancel-delete-all-announcements');
+    const headerBtn = document.getElementById('delete-all-announcements-btn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('is-loading');
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (headerBtn) headerBtn.disabled = true;
+
+    let deleted = 0;
+    try {
+        // Batch delete in chunks (Firestore batch limit is 500 ops)
+        while (true) {
+            const snapshot = await firestoreDb.collection('announcements').limit(400).get();
+            if (snapshot.empty) break;
+
+            const batch = firestoreDb.batch();
+            snapshot.forEach(function(doc) {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            deleted += snapshot.size;
+        }
+
+        if (typeof window.writeAuditLog === 'function') {
+            await window.writeAuditLog(
+                'admin_announcement_delete_all',
+                'danger',
+                'Deleted all announcements (' + deleted + ')'
+            );
+        }
+
+        await fetchAnnouncements();
+        closeDeleteAllAnnouncementsModal();
+        alert('Deleted ' + deleted + ' announcement(s).');
+    } catch (error) {
+        console.error('Error deleting all announcements:', error);
+        handleAnnouncementPermissionError(error);
+        alert('Failed to delete all announcements: ' + (error.message || 'Unknown error'));
+    } finally {
+        if (confirmBtn) {
+            confirmBtn.classList.remove('is-loading');
+            confirmBtn.disabled = false;
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (headerBtn) headerBtn.disabled = false;
+    }
 }
 
 function openAnnouncementModal() {
