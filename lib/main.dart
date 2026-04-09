@@ -41,10 +41,16 @@ class _RootAppState extends State<RootApp> {
     }
     
     // Initialize Firebase if not already initialized
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+    } catch (e) {
+      if (!e.toString().contains('duplicate-app')) {
+        rethrow;
+      }
     }
   }
 

@@ -58,7 +58,21 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Audit log write failed: $e');
         }
 
-        // Redirection is handled automatically by AuthWrapper in main.dart
+        // Navigate directly to the correct dashboard
+        if (mounted) {
+          final roleTag = role.trim().toUpperCase();
+          Widget destination;
+          if (roleTag == 'LGU' || roleTag == 'ADMIN') {
+            destination = const LGUDashboardScreen();
+          } else {
+            destination = const MainHomeScreen();
+          }
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => destination),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       try {
@@ -125,7 +139,21 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Audit log write failed: $e');
         }
 
-        // Redirection is handled automatically by AuthWrapper in main.dart
+        // Navigate directly to the correct dashboard
+        if (mounted) {
+          final roleTag = role.trim().toUpperCase();
+          Widget destination;
+          if (roleTag == 'LGU' || roleTag == 'ADMIN') {
+            destination = const LGUDashboardScreen();
+          } else {
+            destination = const MainHomeScreen();
+          }
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => destination),
+            (route) => false,
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       try {

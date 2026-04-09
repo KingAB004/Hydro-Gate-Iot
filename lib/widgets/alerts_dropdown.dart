@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/formatters.dart';
 import '../screens/alerts_screen.dart';
 import '../utils/notifications.dart';
 
@@ -118,7 +119,7 @@ class AlertsDropdown extends StatelessWidget {
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final data = docs[index].data() as Map<String, dynamic>;
-                        final String title = data['title'] ?? 'Announcement';
+                        final String title = formatGateId(data['title'] ?? 'Announcement');
                         final String rawType = data['type'] ?? 'info';
                         final Timestamp? timestamp = data['timestamp'] as Timestamp?;
                         final DateTime dt = timestamp?.toDate() ?? DateTime.now();

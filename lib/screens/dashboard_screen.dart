@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
 import '../utils/notifications.dart';
 import '../services/weather_service.dart';
+import '../utils/formatters.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
 import '../models/weather_models.dart';
@@ -56,6 +57,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   WeatherForecast? _weatherForecast;
   bool _isLoadingWeather = true;
 
+  bool _hasShownWarningPrompt = false;
+  bool _hasShownCriticalPrompt = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   Future<void> _fetchWeatherData() async {
     try {
-      final forecast = await _weatherService.getCompleteWeather('Philippines');
+      final forecast = await _weatherService.getCompleteWeather('Marikina');
       if (mounted) {
         setState(() {
           _weatherForecast = forecast;
@@ -133,6 +137,33 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     lastUpdated = data['last_updated']?.toString() ?? '';
                     _isLoadingDevice = false;
                   });
+
+                  // --- THRESHOLD LOGIC ---
+                  if (mounted && isGateOpen) {
+                    if (waterLevelM >= 18.0 && !_hasShownCriticalPrompt) {
+                      _hasShownCriticalPrompt = true;
+                      _showLevelThresholdDialog(
+                        isCritical: true, 
+                        message: 'Water level has reached CRITICAL (${waterLevelM.toStringAsFixed(1)}m). It is highly recommended to CLOSE the gate immediately.'
+                      );
+                    } else if (waterLevelM >= 16.0 && waterLevelM < 18.0 && !_hasShownWarningPrompt) {
+                      _hasShownWarningPrompt = true;
+                      _showLevelThresholdDialog(
+                        isCritical: false, 
+                        message: 'Water level has reached CAUTION (${waterLevelM.toStringAsFixed(1)}m). Consider closing the gate.'
+                      );
+                    }
+                  }
+
+                  // Reset flags if level drops back down
+                  if (waterLevelM < 16.0) {
+                    _hasShownWarningPrompt = false;
+                    _hasShownCriticalPrompt = false;
+                  } else if (waterLevelM >= 16.0 && waterLevelM < 18.0) {
+                    _hasShownCriticalPrompt = false;
+                  }
+                  // -------------------------
+
                 } else if (mounted) {
                    setState(() => _isLoadingDevice = false);
                 }
@@ -550,6 +581,105 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         );
       },
     );
+  }
+
+  void _showLevelThresholdDialog({required bool isCritical, required String message}) {
+    if (!mounted) return;
+    
+    final parentContext = context;
+    Future.microtask(() {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded, 
+                color: isCritical ? dangerRed : warningOrange, 
+                size: 28
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isCritical ? 'CRITICAL LEVEL' : 'CAUTION LEVEL',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isCritical ? dangerRed : textPrimary),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(fontSize: 16, color: textSecondary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Dismiss', style: TextStyle(color: textSecondary, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newStatus = 'closed';
+                Navigator.of(dialogContext).pop();
+                try {
+                  if (_floodRef != null) {
+                    await _floodRef!.update({'floodgate_status': newStatus});
+                    
+                    await AuditLogService().logEvent(
+                      action: 'floodgate_update',
+                      severity: 'warning',
+                      description: 'Floodgate closed from threshold prompt on device $assignedGateId',
+                      role: _role,
+                    );
+
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      await FirebaseFirestore.instance.collection('announcements').add({
+                        'userId': user.uid,
+                        'message': '$_username closed the floodgate ($assignedGateId) due to high water levels.',
+                        'title': 'Emergency Floodgate Action',
+                        'type': 'emergency',
+                        'timestamp': FieldValue.serverTimestamp(),
+                        'sender': 'System',
+                        'gateId': assignedGateId,
+                      });
+                    }
+                  }
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Floodgate closed successfully.'),
+                        backgroundColor: successGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint("Firebase Update Error: $e");
+                  if (mounted) {
+                    ScaffoldMessenger.of(parentContext).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update: $e'),
+                        backgroundColor: dangerRed,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCritical ? dangerRed : warningOrange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text('Close Gate', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+    });
   }
 
   Widget _buildWaterLevelMonitorCard() {

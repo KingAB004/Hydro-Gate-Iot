@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
 import '../utils/page_transitions.dart';
+import 'main_home_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -93,9 +94,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             backgroundColor: Color(0xFF10B981),
           ),
         );
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
-          PageTransitions.slideFadeRoute(const LoginScreen()),
+          MaterialPageRoute(builder: (context) => const MainHomeScreen()),
+          (route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
