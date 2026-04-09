@@ -157,7 +157,10 @@ function renderHydrogratesList() {
             '<div class="device-card-header">' +
                 '<div>' +
                     '<h5>' + device.name + '</h5>' +
-                    '<p class="device-location">?? ' + device.location + '</p>' +
+                    '<p class="device-location">' +
+                        '<i data-lucide="map-pin" class="device-location-icon"></i>' +
+                        '<span>' + device.location + '</span>' +
+                    '</p>' +
                 '</div>' +
                 '<span class="badge ' + statusClass + '">' + device.status + '</span>' +
             '</div>' +
@@ -182,6 +185,11 @@ function renderHydrogratesList() {
             '</div>';
         container.appendChild(card);
     });
+
+    // Re-render Lucide icons for dynamically injected markup.
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
 }
 
 // Select a device and show its details

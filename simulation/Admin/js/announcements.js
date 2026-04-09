@@ -4,6 +4,35 @@ let announcements = [];
 let hasShownAnnouncementPermissionWarning = false;
 let hasShownAnnouncementInitWarning = false;
 
+function getAnnouncementFilterState() {
+    const search = (document.getElementById('announcement-search')?.value || '').trim().toLowerCase();
+    const audience = (document.getElementById('announcement-audience-filter')?.value || '').trim();
+    const status = (document.getElementById('announcement-status-filter')?.value || '').trim();
+    return { search, audience, status };
+}
+
+function filterAnnouncements(list) {
+    const { search, audience, status } = getAnnouncementFilterState();
+    return (list || []).filter(a => {
+        if (audience) {
+            const roles = Array.isArray(a.audience) ? a.audience : [];
+            if (!roles.includes(audience)) return false;
+        }
+        if (status) {
+            if ((a.status || '') !== status) return false;
+        }
+        if (search) {
+            const haystack = `${a.title || ''} ${a.message || ''} ${a.sender || ''}`.toLowerCase();
+            if (!haystack.includes(search)) return false;
+        }
+        return true;
+    });
+}
+
+function applyAnnouncementFilters() {
+    renderAnnouncements(filterAnnouncements(announcements));
+}
+
 // Initialize Announcements
 window.initAnnouncements = async function() {
     attachAnnouncementEventListeners();
@@ -37,7 +66,7 @@ async function fetchAnnouncements() {
                 sender: data.sender || 'Admin'
             });
         });
-        renderAnnouncements();
+        applyAnnouncementFilters();
         
         // Try to update stats on overview if function exists
         if (typeof updateStats === 'function') {
@@ -67,6 +96,10 @@ function attachAnnouncementEventListeners() {
     const scheduleCheckbox = document.getElementById('schedule-announcement');
     const scheduleTimeInput = document.getElementById('schedule-time');
 
+    const announcementSearch = document.getElementById('announcement-search');
+    const announcementAudienceFilter = document.getElementById('announcement-audience-filter');
+    const announcementStatusFilter = document.getElementById('announcement-status-filter');
+
     if (newAnnouncementBtn) newAnnouncementBtn.addEventListener('click', openAnnouncementModal);
     if (announcementForm) announcementForm.addEventListener('submit', handleAnnouncementSubmit);
     if (cancelAnnouncementBtn) cancelAnnouncementBtn.addEventListener('click', closeAnnouncementModal);
@@ -87,6 +120,10 @@ function attachAnnouncementEventListeners() {
             }
         });
     }
+
+    if (announcementSearch) announcementSearch.addEventListener('input', applyAnnouncementFilters);
+    if (announcementAudienceFilter) announcementAudienceFilter.addEventListener('change', applyAnnouncementFilters);
+    if (announcementStatusFilter) announcementStatusFilter.addEventListener('change', applyAnnouncementFilters);
 }
 
 function openAnnouncementModal() {
@@ -169,24 +206,26 @@ async function handleAnnouncementSubmit(e) {
     }
 }
 
-function renderAnnouncements() {
+function renderAnnouncements(list) {
     const container = document.getElementById('announcements-list');
     if (!container) return;
     
     container.innerHTML = '';
 
-    if (announcements.length === 0) {
+    const items = Array.isArray(list) ? list : announcements;
+
+    if (items.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i data-lucide="message-square-off"></i>
-                <p>No communications found in the feed.</p>
+                <p>No communications match your filters.</p>
             </div>
         `;
         if (window.lucide) window.lucide.createIcons();
         return;
     }
 
-    announcements.forEach(announcement => {
+    items.forEach(announcement => {
         const card = document.createElement('div');
         card.className = 'announcement-card fade-in ' + announcement.type.toLowerCase();
         

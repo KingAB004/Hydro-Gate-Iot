@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AFWMS Admin Dashboard</title>
+    <title>HydroGate Admin Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -344,6 +344,22 @@
                         <button class="btn btn-primary" id="new-announcement-btn">
                             <i data-lucide="plus"></i> Create Announcement
                         </button>
+                    </div>
+
+                    <div class="filter-bar" aria-label="Announcement filters">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="announcement-search" placeholder="Search announcements..." class="search-input">
+                        <select id="announcement-audience-filter" class="filter-select" aria-label="Filter by audience">
+                            <option value="">All Audiences</option>
+                            <option value="Admin">Admin</option>
+                            <option value="LGU">LGU</option>
+                            <option value="Homeowner">Homeowner</option>
+                        </select>
+                        <select id="announcement-status-filter" class="filter-select" aria-label="Filter by status">
+                            <option value="">All Status</option>
+                            <option value="Sent">Sent</option>
+                            <option value="Scheduled">Scheduled</option>
+                        </select>
                     </div>
 
                     <div class="announcement-layout">
