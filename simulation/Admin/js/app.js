@@ -235,18 +235,29 @@ function updateStats() {
 
     // Water level
     if (hydrograteData && hydrograteData.waterLevel !== undefined) {
-        const waterLevelPercent = (hydrograteData.waterLevel / hydrograteData.maxWaterLevel) * 100;
         const waterLevelElem = document.getElementById('water-level');
-        if (waterLevelElem) waterLevelElem.textContent = Math.round(waterLevelPercent) + '%';
+        if (waterLevelElem) waterLevelElem.textContent = (Number(hydrograteData.waterLevel) || 0).toFixed(2) + 'm';
+
+        const branchLabelEl = document.getElementById('water-branch-label');
+        if (branchLabelEl) {
+            const branch = (hydrograteData.branch || '').toString().trim();
+            branchLabelEl.textContent = '(Branch: ' + (branch || '--') + ')';
+        }
     }
 
-    // Active alerts
-    if (typeof announcements !== 'undefined') {
-        const activeAlerts = announcements.filter(a => a.type === 'Alert' || a.type === 'Warning' || a.type === 'Emergency').length;
-        const activeAlertsElem = document.getElementById('active-alerts');
-        if (activeAlertsElem) activeAlertsElem.textContent = activeAlerts;
+    // Active alerts (prefer water-level smart alerts if available)
+    const activeAlertsElem = document.getElementById('active-alerts');
+    if (activeAlertsElem) {
+        if (typeof window.__activeWaterAlertsCount === 'number') {
+            activeAlertsElem.textContent = String(window.__activeWaterAlertsCount);
+        } else if (typeof announcements !== 'undefined') {
+            const activeAlerts = announcements.filter(a => a.type === 'Alert' || a.type === 'Warning' || a.type === 'Emergency').length;
+            activeAlertsElem.textContent = String(activeAlerts);
+        }
+    }
 
-        // Pending messages
+    // Pending messages (announcements)
+    if (typeof announcements !== 'undefined') {
         const pendingMessages = announcements.filter(a => a.status === 'Scheduled').length;
         const pendingMessagesElem = document.getElementById('pending-messages');
         if (pendingMessagesElem) pendingMessagesElem.textContent = pendingMessages;
