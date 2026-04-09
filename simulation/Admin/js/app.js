@@ -5,9 +5,92 @@ document.addEventListener('DOMContentLoaded', function() {
     initApp();
 });
 
+// Reusable confirm-delete modal (used by Users, Hydrograte, Announcements, etc.)
+// Avoids browser confirm() for a consistent centered UX.
+let __confirmDeleteOnConfirm = null;
+
+function setupConfirmDeleteModal() {
+    const modal = document.getElementById('confirm-delete-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-confirm-delete-modal');
+    const cancelBtn = document.getElementById('cancel-confirm-delete');
+    const confirmBtn = document.getElementById('confirm-confirm-delete');
+
+    const close = function() {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        __confirmDeleteOnConfirm = null;
+        if (confirmBtn) {
+            confirmBtn.classList.remove('is-loading');
+            confirmBtn.disabled = false;
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) close();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function() {
+            if (typeof __confirmDeleteOnConfirm !== 'function') {
+                close();
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('is-loading');
+            if (cancelBtn) cancelBtn.disabled = true;
+
+            try {
+                const result = __confirmDeleteOnConfirm();
+                if (result && typeof result.then === 'function') {
+                    await result;
+                }
+                close();
+            } catch (err) {
+                console.error('Confirm delete action failed:', err);
+                close();
+            }
+        });
+    }
+
+    window.openConfirmDeleteModal = function(options) {
+        const titleEl = document.getElementById('confirm-delete-title');
+        const messageEl = document.getElementById('confirm-delete-message');
+        const confirmBtnEl = document.getElementById('confirm-confirm-delete');
+
+        const title = (options && options.title) ? String(options.title) : 'Confirm Delete';
+        const message = (options && options.message) ? String(options.message) : 'This action cannot be undone.';
+        const confirmText = (options && options.confirmText) ? String(options.confirmText) : 'Delete';
+        const onConfirm = options && options.onConfirm;
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        __confirmDeleteOnConfirm = (typeof onConfirm === 'function') ? onConfirm : null;
+
+        if (confirmBtnEl) {
+            confirmBtnEl.innerHTML = '<i data-lucide="trash-2"></i> ' + confirmText;
+            confirmBtnEl.classList.remove('is-loading');
+            confirmBtnEl.disabled = false;
+        }
+
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        if (window.lucide) window.lucide.createIcons();
+    };
+}
+
 function initApp() {
     // Setup tab navigation first so sidebar works even if other modules fail.
     setupTabNavigation();
+
+    // Global reusable modal utilities
+    setupConfirmDeleteModal();
 
     const safeCall = function(label, fn) {
         try {

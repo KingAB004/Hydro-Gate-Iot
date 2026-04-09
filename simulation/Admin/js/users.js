@@ -349,26 +349,42 @@ window.editUser = function(id) {
 
 // Delete User
 window.deleteUser = async function(id) {
-    if (confirm('Are you sure you want to delete this user from the dashboard list? Note: This deletes the Firestore profile, but cannot delete the Firebase Auth account directly from the client.')) {
+    const user = users.find(u => u.id === id);
+    const label = (user?.email || user?.username || id).toString();
+
+    const runDelete = async function() {
         const firestoreDb = window.firestoreDb;
         try {
-            const user = users.find(u => u.id === id);
             await firestoreDb.collection('users').doc(id).delete();
             if (typeof window.writeAuditLog === 'function') {
                 await window.writeAuditLog(
                     'admin_user_delete',
                     'warning',
-                    'Deleted user profile: ' + (user?.email || id)
+                    'Deleted user profile: ' + label
                 );
             }
             if (typeof usersUnsubscribe !== 'function') {
-                await fetchUsers(); // Refresh list fallback
+                await fetchUsers();
             }
-        } catch(error) {
-            console.error("Error deleting user: ", error);
+        } catch (error) {
+            console.error('Error deleting user: ', error);
             handleUsersPermissionError(error);
-            alert("Error deleting user: " + error.message);
+            alert('Error deleting user: ' + (error.message || 'Unknown error'));
         }
+    };
+
+    if (typeof window.openConfirmDeleteModal === 'function') {
+        window.openConfirmDeleteModal({
+            title: 'Delete User',
+            message: `Delete user "${label}"? This deletes the Firestore profile only (it cannot delete the Firebase Auth account from the client).`,
+            confirmText: 'Delete',
+            onConfirm: runDelete
+        });
+        return;
+    }
+
+    if (confirm('Are you sure you want to delete this user from the dashboard list? Note: This deletes the Firestore profile, but cannot delete the Firebase Auth account directly from the client.')) {
+        await runDelete();
     }
 };
 

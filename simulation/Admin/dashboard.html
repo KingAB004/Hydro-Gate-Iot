@@ -531,6 +531,25 @@
         </div>
     </div>
 
+    <!-- Confirm Delete Modal (Reusable) -->
+    <div id="confirm-delete-modal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirm-delete-title">Confirm Delete</h3>
+                <button class="close-btn" id="close-confirm-delete-modal">&times;</button>
+            </div>
+
+            <p class="modal-subtext" id="confirm-delete-message"></p>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-confirm-delete">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-confirm-delete">
+                    <i data-lucide="trash-2"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Scripts (Compat Version for file:// support) -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>

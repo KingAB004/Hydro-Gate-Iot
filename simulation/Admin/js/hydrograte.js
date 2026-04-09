@@ -447,15 +447,37 @@ function editHydrograte(id) {
 
 // Delete Hydrograte
 function deleteHydrograte(id) {
-    if (confirm('Are you sure you want to delete this hydrograte device? This will also remove its database record.')) {
-        if (window.firestoreDb) {
-            window.firestoreDb.collection('devices').doc(id).delete().then(function() {
-                alert('Device deleted successfully.');
-                if (typeof updateStats === 'function') updateStats();
-            }).catch(function(error) {
-                console.error('Error deleting device:', error);
-            });
+    const device = hydrogrates.find(function(h) { return h.id === id; });
+    const label = device ? (device.name + (device.location ? ' (' + device.location + ')' : '')) : id;
+
+    const runDelete = async function() {
+        if (!window.firestoreDb) {
+            alert('Firestore is not initialized. Please reload the page.');
+            return;
         }
+
+        try {
+            await window.firestoreDb.collection('devices').doc(id).delete();
+            alert('Device deleted successfully.');
+            if (typeof updateStats === 'function') updateStats();
+        } catch (error) {
+            console.error('Error deleting device:', error);
+            alert('Failed to delete device: ' + (error.message || 'Unknown error'));
+        }
+    };
+
+    if (typeof window.openConfirmDeleteModal === 'function') {
+        window.openConfirmDeleteModal({
+            title: 'Delete Device',
+            message: `Delete device "${label}"? This will remove its database record.`,
+            confirmText: 'Delete',
+            onConfirm: runDelete
+        });
+        return;
+    }
+
+    if (confirm('Are you sure you want to delete this hydrograte device? This will also remove its database record.')) {
+        runDelete();
     }
 }
 
