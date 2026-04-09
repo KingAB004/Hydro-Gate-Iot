@@ -394,12 +394,17 @@
 
                 <!-- Statistics Tab -->
                 <section id="statistics" class="tab-content">
-                    <div class="section-header">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
                         <h3>Real-time Data Statistics</h3>
-                        <div class="timeframe-selector">
-                            <button class="btn btn-secondary active timeframe-btn" data-timeframe="day">Day</button>
-                            <button class="btn btn-secondary timeframe-btn" data-timeframe="week">Week</button>
-                            <button class="btn btn-secondary timeframe-btn" data-timeframe="month">Month</button>
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <select id="stats-device-selector" class="filter-select" style="min-width: 220px;">
+                                <option value="">Loading devices...</option>
+                            </select>
+                            <div class="timeframe-selector">
+                                <button class="btn btn-secondary active timeframe-btn" data-timeframe="day">Day</button>
+                                <button class="btn btn-secondary timeframe-btn" data-timeframe="week">Week</button>
+                                <button class="btn btn-secondary timeframe-btn" data-timeframe="month">Month</button>
+                            </div>
                         </div>
                     </div>
 
