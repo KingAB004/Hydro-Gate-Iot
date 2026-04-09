@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,6 +17,8 @@ class AnnouncementListenerService {
   StreamSubscription<QuerySnapshot>? _announcementSubscription;
   String? _lastAnnouncementId;
   bool _isInitialized = false;
+  String _role = 'Homeowner';
+  String? _currentUserId;
 
   /// Initialize the listener service
   Future<void> initialize() async {
@@ -25,6 +27,16 @@ class AnnouncementListenerService {
     // Initialize local notifications
     await _initializeLocalNotifications();
 
+    // Get current user and role
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _currentUserId = user.uid;
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        _role = doc.data()?['role'] ?? 'Homeowner';
+      }
+    }
+
     // Get the latest announcement ID to avoid showing old announcements on app start
     await _getLatestAnnouncementId();
 
@@ -32,7 +44,7 @@ class AnnouncementListenerService {
     _startListening();
 
     _isInitialized = true;
-    print('Announcement Listener Service initialized');
+    print('Announcement Listener Service initialized with role: $_role');
   }
 
   /// Initialize local notifications plugin
@@ -68,15 +80,18 @@ class AnnouncementListenerService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastAnnouncementId = snapshot.docs.first.id;
-        print('Baseline announcement ID set: \');
+        print('Baseline announcement ID set');
       }
     } catch (e) {
-      print('Error getting baseline announcement: \');
+      print('Error getting baseline announcement: $e');
     }
   }
 
   /// Start listening to Firestore for new announcements
   void _startListening() {
+    if (_currentUserId == null) return;
+
+    // We'll use a simple listener and filter in Dart to avoid Filter.or version issues
     _announcementSubscription = _firestore
         .collection('announcements')
         .orderBy('timestamp', descending: true)
@@ -87,6 +102,28 @@ class AnnouncementListenerService {
             if (snapshot.docs.isEmpty) return;
 
             final doc = snapshot.docs.first;
+            final data = doc.data() as Map<String, dynamic>;
+            
+            // ROLE-BASED FILTERING (IN DART)
+            final String? docUserId = data['userId'];
+            final String docType = data['type'] ?? 'info';
+
+            // Filter out if it's not meant for the current user
+            bool isMeantForMe = false;
+            if (_role == 'Admin') {
+              // Admin sees everything global + all gate logs
+              if (docUserId == 'global' || docType == 'gate_log' || docUserId == null) {
+                isMeantForMe = true;
+              }
+            } else {
+              // Regular user sees global + their own logs
+              if (docUserId == 'global' || docUserId == _currentUserId || docUserId == null) {
+                isMeantForMe = true;
+              }
+            }
+
+            if (!isMeantForMe) return;
+
             final announcementId = doc.id;
 
             // Skip if this is the same as the last announcement we've seen
@@ -120,7 +157,7 @@ class AnnouncementListenerService {
             _showLocalNotification(type, message, sender, announcementId, title);
           },
           onError: (error) {
-            print('Error listening to announcements: \The term 'head' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'grep' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'Y' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'. A parameter cannot be found that matches parameter name 'Chord'.');
+            print('Error listening to announcements: $error');
           },
         );
   }
@@ -138,7 +175,7 @@ class AnnouncementListenerService {
       }
       return false; // Document doesn't exist, assume false
     } catch (e) {
-      print('Error reading user preference: \');
+      print('Error reading user preference');
       return false; // Error reading, assume false
     }
   }
@@ -151,7 +188,7 @@ class AnnouncementListenerService {
     String announcementId,
     String title
   ) async {
-    print('Showing notification: \ - \');
+    print('Showing notification: $title - $message');
 
     final config = _getNotificationConfig(type, title);
 
@@ -198,10 +235,19 @@ class AnnouncementListenerService {
   /// Get notification configuration based on type
   Map<String, dynamic> _getNotificationConfig(String type, String title) {
     switch (type.toLowerCase()) {
+      case 'gate_log':
+        return {
+          'title': '⚙️ Gate Activity',
+          'channelId': 'gate_alerts',
+          'channelName': 'Gate Monitoring',
+          'importance': Importance.high,
+          'priority': Priority.high,
+          'color': const Color(0xFF6366F1), // Indigo
+        };
       case 'emergency':
       case 'danger':
         return {
-          'title': '🚨 \',
+          'title': '🚨 Notification',
           'channelId': 'emergency_alerts',
           'channelName': 'Emergency Alerts',
           'importance': Importance.max,
@@ -211,7 +257,7 @@ class AnnouncementListenerService {
       case 'warning':
       case 'alert':
         return {
-          'title': '⚠️ \',
+          'title': '⚠️ Warning',
           'channelId': 'warning_alerts',
           'channelName': 'Warning Alerts',
           'importance': Importance.high,
@@ -221,7 +267,7 @@ class AnnouncementListenerService {
       case 'info':
       default:
         return {
-          'title': 'ℹ️ \',
+          'title': 'ℹ️ Info',
           'channelId': 'info_alerts',
           'channelName': 'Information',
           'importance': Importance.defaultImportance,
@@ -233,7 +279,7 @@ class AnnouncementListenerService {
 
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
-    print('Notification tapped: \');
+    print('Notification tapped');
   }
 
   /// Stop listening for announcements

@@ -1,25 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-/// Screen to display all announcements from LGU
+/// Screen to display all announcements from LGU and private activity logs
 /// Shows real-time updates from Firestore
-class AnnouncementsScreen extends StatelessWidget {
+class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({Key? key}) : super(key: key);
 
   @override
+  State<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
+}
+
+class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
+  String _role = 'Homeowner';
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _role = doc.data()?['role'] ?? 'Homeowner';
+          _initialized = true;
+        });
+      } else if (mounted) {
+        setState(() => _initialized = true);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Build the query based on role
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('announcements');
+
+    if (_role == 'Admin') {
+      // Admins see everything (global alerts + all gate logs)
+      query = query.orderBy('timestamp', descending: true);
+    } else {
+      // Regular users see global alerts + their own gate logs
+      if (user != null) {
+        // Fetch where userId is either 'global' or the current user's UID.
+        query = query.where('userId', whereIn: ['global', user.uid])
+                     .orderBy('timestamp', descending: true);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LGU Announcements'),
+        title: Text(_role == 'Admin' ? 'System Logs & Alerts' : 'Announcements'),
         backgroundColor: const Color(0xFF2c80ff),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('announcements')
-            .orderBy('timestamp', descending: true)
-            .limit(50)
-            .snapshots(),
+        stream: query.limit(50).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -209,6 +258,12 @@ class AnnouncementCard extends StatelessWidget {
 
   Map<String, dynamic> _getTypeConfig(String type) {
     switch (type) {
+      case 'gate_log':
+        return {
+          'label': 'GATE ACTION',
+          'icon': '⚙️',
+          'color': const Color(0xFF6366F1), // Indigo
+        };
       case 'danger':
         return {
           'label': 'EMERGENCY',

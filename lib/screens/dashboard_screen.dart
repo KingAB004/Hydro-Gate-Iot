@@ -29,8 +29,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   String waterLevelStatus = 'Normal';
   String lastUpdated = '';
   
-  // Realtime Database reference
-  final DatabaseReference _floodRef = FirebaseDatabase.instance.ref('flood_monitoring');
+  // Realtime Database reference (null until device is loaded)
+  DatabaseReference? _floodRef;
+  String? assignedGateId;
+  bool _isLoadingDevice = true;
 
   // Modern Color Palette
   static const Color bgLight = Color(0xFFF8FAFC);
@@ -113,27 +115,43 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             setState(() {
               _username = data['username'] ?? _username;
               _role = data['role'] ?? _role;
+              // FETCH ASSIGNED GATE ID
+              assignedGateId = data['assigned_gate_id'];
             });
+
+            if (assignedGateId != null) {
+              // Initialize Ref to the specific gate
+              _floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$assignedGateId');
+              
+              // Listen to flood monitoring data for THIS gate
+              _floodRef!.onValue.listen((event) {
+                if (event.snapshot.exists && mounted) {
+                  final data = event.snapshot.value as Map<dynamic, dynamic>;
+                  setState(() {
+                    isGateOpen = data['floodgate_status'] != 'closed';
+                    waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
+                    // Read the meter value directly (1:1 mapping with database)
+                    waterLevelM = (data['water_level_m'] ?? 0).toDouble();
+                    waterLevelStatus = data['water_level']?.toString() ?? 'Normal';
+                    lastUpdated = data['last_updated']?.toString() ?? '';
+                    _isLoadingDevice = false;
+                  });
+                } else if (mounted) {
+                   setState(() => _isLoadingDevice = false);
+                }
+              });
+            } else {
+              if (mounted) setState(() => _isLoadingDevice = false);
+            }
           }
+        } else {
+          if (mounted) setState(() => _isLoadingDevice = false);
         }
       } catch (e) {
         debugPrint("Error fetching user data: $e");
+        if (mounted) setState(() => _isLoadingDevice = false);
       }
     }
-    
-    // Listen to flood monitoring data
-    _floodRef.onValue.listen((event) {
-      if (event.snapshot.exists && mounted) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>;
-        setState(() {
-          isGateOpen = data['floodgate_status'] != 'closed';
-          waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
-          waterLevelM = (data['water_level_m'] ?? 0).toDouble();
-          waterLevelStatus = data['water_level']?.toString() ?? 'Normal';
-          lastUpdated = data['last_updated']?.toString() ?? '';
-        });
-      }
-    });
   }
 
   void _showNotificationsDropdown() {
@@ -162,24 +180,28 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       drawer: _buildDrawer(),
 
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildCurrentStatusMessage(),
-              const SizedBox(height: 20),
-              _buildEmergencyFloodgateControl(),
-              const SizedBox(height: 20),
-              _buildWaterLevelMonitorCard(),
-              const SizedBox(height: 20),
-              _buildRainfallInfoCard(),
-              const SizedBox(height: 80),
-            ],
-          ),
-        ),
+        child: _isLoadingDevice 
+          ? const Center(child: CircularProgressIndicator(color: brandBlue))
+          : assignedGateId == null
+            ? _buildNoDeviceState()
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 24),
+                    _buildCurrentStatusMessage(),
+                    const SizedBox(height: 20),
+                    _buildEmergencyFloodgateControl(),
+                    const SizedBox(height: 20),
+                    _buildWaterLevelMonitorCard(),
+                    const SizedBox(height: 20),
+                    _buildRainfallInfoCard(),
+                    const SizedBox(height: 80),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -199,21 +221,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       iconColor = dangerRed;
       icon = Icons.warning_rounded;
       title = 'CRITICAL WATER LEVEL';
-      message = 'Water levels exceed 18cm. Immediate action required.';
+      message = 'Water levels exceed 18m. Immediate action required.';
     } else if (simulatedMeters >= 15.0) {
       // CAUTION LEVEL
       bgColor = warningOrange.withOpacity(0.1);
       iconColor = warningOrange;
       icon = Icons.report_problem_rounded;
       title = 'CAUTION: ELEVATED WATER LEVEL';
-      message = 'Water levels are 15cm or higher. Please monitor the situation closely.';
+      message = 'Water levels are 15m or higher. Please monitor the situation closely.';
     } else {
       // NORMAL LEVEL
       bgColor = successGreen.withOpacity(0.1);
       iconColor = successGreen;
       icon = Icons.check_circle_outline_rounded;
       title = 'STATUS: NORMAL';
-      message = 'Water levels are stable below 15cm. No immediate action required.';
+      message = 'Water levels are stable below 15m. No immediate action required.';
     }
 
     return Container(
@@ -500,13 +522,32 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 final newStatus = isGateOpen ? 'closed' : 'open';
                 Navigator.of(dialogContext).pop();
                 try {
-                  await _floodRef.update({'floodgate_status': newStatus});
-                  await AuditLogService().logEvent(
-                    action: 'floodgate_update',
-                    severity: 'warning',
-                    description: 'Floodgate set to $newStatus',
-                    role: _role,
-                  );
+                  if (_floodRef != null) {
+                    await _floodRef!.update({'floodgate_status': newStatus});
+                    
+                    // 1. Existing Audit Log (RTDB)
+                    await AuditLogService().logEvent(
+                      action: 'floodgate_update',
+                      severity: 'warning',
+                      description: 'Floodgate set to $newStatus on device $assignedGateId',
+                      role: _role,
+                    );
+
+                    // 2. NEW: Announcements Log (Firestore)
+                    // This will recreate the collection if it was deleted
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      await FirebaseFirestore.instance.collection('announcements').add({
+                        'userId': user.uid,
+                        'message': '$_username ${newStatus == 'open' ? 'opened' : 'closed'} the floodgate ($assignedGateId).',
+                        'title': 'Floodgate Update',
+                        'type': 'gate_log',
+                        'timestamp': FieldValue.serverTimestamp(),
+                        'sender': 'System',
+                        'gateId': assignedGateId,
+                      });
+                    }
+                  }
                   if (mounted) {
                     ScaffoldMessenger.of(parentContext).showSnackBar(
                       SnackBar(
@@ -954,6 +995,49 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoDeviceState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: brandBlue.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.router_rounded, color: brandBlue, size: 64),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'No Device Linked',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: textPrimary),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Your account is not currently linked to a HydroGate device. Please contact your LGU or Admin to assign your gateway.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: () => _loadUserData(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: brandBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text('Refresh Status', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ),
     );

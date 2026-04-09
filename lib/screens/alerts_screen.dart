@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/alerts_dropdown.dart';
 import 'main_home_screen.dart';
@@ -26,6 +27,31 @@ class _AlertsScreenState extends State<AlertsScreen> {
   static const Color infoBlue = Color(0xFF3B82F6);
 
   int _refreshKey = 0; // Key to force refresh stream
+  String _role = 'Homeowner';
+  String? _currentUserId;
+  bool _isLoadingRole = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _currentUserId = user.uid;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _role = doc.data()?['role'] ?? 'Homeowner';
+          _isLoadingRole = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoadingRole = false);
+      }
+    }
+  }
 
 
   Future<void> _deleteAllAlerts() async {
@@ -211,12 +237,33 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 
   Widget _buildAnnouncementsList() {
+    if (_isLoadingRole) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 40.0),
+          child: CircularProgressIndicator(color: brandBlue),
+        ),
+      );
+    }
+
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('announcements');
+
+    if (_role == 'Admin') {
+      // Admins see everything (global alerts + all gate logs)
+      query = query.orderBy('timestamp', descending: true);
+    } else {
+      // Regular users see global alerts + their own gate logs
+      if (_currentUserId != null) {
+        query = query.where('userId', whereIn: ['global', _currentUserId]).orderBy('timestamp', descending: true);
+      } else {
+        // Fallback for non-logged-in (shouldn't happen)
+        query = query.where('userId', isEqualTo: 'global').orderBy('timestamp', descending: true);
+      }
+    }
+
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey(_refreshKey),
-      stream: FirebaseFirestore.instance
-          .collection('announcements')
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+      stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -228,6 +275,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         }
 
         if (snapshot.hasError) {
+          debugPrint('Firestore Error: ${snapshot.error}');
           return const Center(child: Text('Error loading announcements'));
         }
 

@@ -1,48 +1,5 @@
 // ===== Hydrograte Status & Model =====
-let hydrogrates = [
-    {
-        id: 1,
-        name: 'Main Station - Downtown',
-        location: 'Downtown Area, Sector A',
-        status: 'Online',
-        responseTime: 125,
-        lastPing: 'Just now',
-        model: 'Hydrograte-Pro-X1',
-        firmware: 'v2.4.1',
-        serial: 'HGP-2024-001',
-        sensors: 1,
-        waterLevel: 0.0,
-        maxWaterLevel: 25,
-        lastCalibration: '2026-03-01',
-        nextCalibration: '2026-04-01',
-        installationDate: '2024-01-15',
-        errorLogs: [
-            { timestamp: '2026-03-07 09:15', message: 'Sensor 2 calibration drift detected', type: 'warning' },
-            { timestamp: '2026-03-07 08:30', message: 'Water level exceeded 60%', type: 'warning' },
-            { timestamp: '2026-03-07 07:45', message: 'System health check passed', type: 'success' },
-        ]
-    },
-    {
-        id: 2,
-        name: 'Residential Zone Monitor',
-        location: 'Residential Area, Zone B',
-        status: 'Online',
-        responseTime: 142,
-        lastPing: '2 min ago',
-        model: 'Hydrograte-Lite-V2',
-        firmware: 'v2.3.5',
-        serial: 'HGP-2024-002',
-        sensors: 1,
-        waterLevel: 0.0,
-        maxWaterLevel: 25,
-        lastCalibration: '2026-02-28',
-        nextCalibration: '2026-03-28',
-        installationDate: '2024-03-10',
-        errorLogs: [
-            { timestamp: '2026-03-07 08:00', message: 'Routine check completed', type: 'success' },
-        ]
-    }
-];
+let hydrogrates = []; // Now populated from Firestore
 
 let nextHydrograteId = 3;
 let selectedHydrograteId = 1;
@@ -50,33 +7,73 @@ let hydrograteData = hydrogrates[0];
 
 // Init Hydrograte Status
 function initHydrograteStatus() {
-    if (window.db) {
-        const floodRef = window.db.ref('flood_monitoring');
+    if (window.firestoreDb) {
+        // Listen to Devices in Firestore
+        window.firestoreDb.collection('devices').onSnapshot(function(snapshot) {
+            hydrogrates = [];
+            snapshot.forEach(function(doc) {
+                const data = doc.data();
+                hydrogrates.push({
+                    id: doc.id,
+                    name: data.name || 'Unnamed Device',
+                    location: data.location || 'Unknown Location',
+                    status: data.status || 'Online',
+                    responseTime: data.responseTime || 0,
+                    lastPing: data.updated_at || 'Never',
+                    model: data.model || 'Unknown Model',
+                    firmware: data.firmware || 'N/A',
+                    serial: data.serial || doc.id,
+                    sensors: data.sensors || 0,
+                    waterLevel: 0.0, // Will be updated by RTDB
+                    maxWaterLevel: data.maxWaterLevel || 1.5,
+                    installationDate: data.installationDate || 'N/A',
+                    lastCalibration: data.lastCalibration || 'N/A',
+                    nextCalibration: data.nextCalibration || 'N/A',
+                    errorLogs: data.errorLogs || []
+                });
+            });
+
+            if (hydrogrates.length > 0 && !hydrogrates.find(h => h.id === selectedHydrograteId)) {
+                selectedHydrograteId = hydrogrates[0].id;
+            }
+            
+            renderHydrogratesList();
+            syncWithRTDB();
+        });
+    }
+
+    renderHydrogratesList();
+    renderHydrograteStatus();
+    attachHydrograteEventListeners();
+}
+
+// Sync selected device with Realtime Database
+function syncWithRTDB() {
+    if (window.db && selectedHydrograteId) {
+        const floodRef = window.db.ref('flood_monitoring/' + selectedHydrograteId);
         floodRef.on('value', function(snapshot) {
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                if (hydrogrates && hydrogrates.length > 0) {
-                    const mainStation = hydrogrates[0];
-                    if (data.water_level_m !== undefined) {
-                        mainStation.waterLevel = data.water_level_m;
-                    }
-                    if (data.last_updated) {
-                        mainStation.lastPing = data.last_updated;
-                    }
-                    mainStation.sensors = 1; // Ultrasonic Sensor
+                const current = hydrogrates.find(h => h.id === selectedHydrograteId);
+                if (current) {
+                    current.waterLevel = data.water_level_m || 0;
+                    current.lastPing = data.last_updated || current.lastPing;
                     
-                    renderHydrogratesList();
-                    if (selectedHydrograteId === mainStation.id) {
-                        hydrograteData = mainStation;
+                    const floodgateStatusEl = document.getElementById('remote-floodgate-status');
+                    if (floodgateStatusEl && data.floodgate_status) {
+                        floodgateStatusEl.textContent = data.floodgate_status.toUpperCase();
                         
-                        // ADD FLOODGATE STATUS UPDATE HERE
-                        const floodgateStatusEl = document.getElementById('remote-floodgate-status');
-                        if (floodgateStatusEl && data.floodgate_status) {
-                            floodgateStatusEl.textContent = data.floodgate_status.toUpperCase();
+                        // Update toggle button text based on current status
+                        const toggleBtn = document.getElementById('toggle-floodgate-btn');
+                        if (toggleBtn) {
+                            toggleBtn.textContent = data.floodgate_status === 'open' ? 'Close Floodgate' : 'Open Floodgate';
+                            toggleBtn.className = data.floodgate_status === 'open' ? 'btn btn-danger' : 'btn btn-primary';
                         }
-                        
-                        renderHydrograteStatus();
                     }
+                    
+                    hydrograteData = current;
+                    renderHydrograteStatus();
+                    
                     if (typeof window.updateStats === 'function') {
                         window.updateStats();
                     }
@@ -84,10 +81,6 @@ function initHydrograteStatus() {
             }
         });
     }
-
-    renderHydrogratesList();
-    renderHydrograteStatus();
-    attachHydrograteEventListeners();
 }
 
 // Attach event listeners
@@ -104,8 +97,8 @@ function attachHydrograteEventListeners() {
     const toggleFloodgateBtn = document.getElementById('toggle-floodgate-btn');
     if (toggleFloodgateBtn) {
         toggleFloodgateBtn.addEventListener('click', function() {
-            if (window.db) {
-                const floodRef = window.db.ref('flood_monitoring');
+            if (window.db && selectedHydrograteId) {
+                const floodRef = window.db.ref('flood_monitoring/' + selectedHydrograteId);
                 floodRef.once('value').then(function(snapshot) {
                     if (snapshot.exists()) {
                         const currentStatus = snapshot.val().floodgate_status;
@@ -115,18 +108,20 @@ function attachHydrograteEventListeners() {
                                 window.writeAuditLog(
                                     'admin_floodgate_toggle',
                                     'warning',
-                                    'Floodgate set to ' + newStatus
+                                    'Floodgate (Device: ' + selectedHydrograteId + ') set to ' + newStatus
                                 );
                             }
-                        }).catch(function(error) {
-                            console.error('Floodgate update failed:', error);
-                            if (typeof window.writeAuditLog === 'function') {
-                                window.writeAuditLog(
-                                    'admin_floodgate_toggle_failed',
-                                    'danger',
-                                    'Floodgate toggle failed: ' + error.message
-                                );
-                            }
+                        });
+                    } else {
+                        // For a new device, initialize the data for the first time
+                        floodRef.set({
+                            floodgate_status: 'open',
+                            last_updated: new Date().toLocaleTimeString(),
+                            sensor_warning: false,
+                            water_level: 'safe',
+                            water_level_m: 0.1
+                        }).then(function() {
+                            alert('RTDB entry initialized for device: ' + selectedHydrograteId);
                         });
                     }
                 });
@@ -181,9 +176,9 @@ function renderHydrogratesList() {
                 '</div>' +
             '</div>' +
             '<div class="device-card-footer">' +
-                '<button class="btn-device-view" onclick="selectHydrograte(' + device.id + ')">View Details</button>' +
-                '<button class="btn-device-edit" onclick="editHydrograte(' + device.id + ')">Edit</button>' +
-                '<button class="btn-device-delete" onclick="deleteHydrograte(' + device.id + ')">Delete</button>' +
+                '<button class="btn-device-view" onclick="selectHydrograte(\'' + device.id + '\')">View Details</button>' +
+                '<button class="btn-device-edit" onclick="editHydrograte(\'' + device.id + '\')">Edit</button>' +
+                '<button class="btn-device-delete" onclick="deleteHydrograte(\'' + device.id + '\')">Delete</button>' +
             '</div>';
         container.appendChild(card);
     });
@@ -195,6 +190,7 @@ function selectHydrograte(id) {
     hydrograteData = hydrogrates.find(function(h) { return h.id === id; });
     if (hydrograteData) {
         renderHydrograteStatus();
+        syncWithRTDB(); // Start listening to this device's live data
         const detailsEl = document.getElementById('selected-device-details');
         if (detailsEl) detailsEl.scrollIntoView({ behavior: 'smooth' });
     }
@@ -295,57 +291,134 @@ function closeHydrograteModal() {
     document.getElementById('hydrograte-modal').classList.remove('active');
 }
 
+// Slugify helper to create URL/ID friendly strings
+function slugify(text) {
+    if (!text) return '';
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '_')           // Replace spaces with _
+        .replace(/[^\w-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '_')         // Replace multiple - with single _
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+}
+
 // Handle Hydrograte Form Submit
-function handleHydrograteFormSubmit(e) {
+async function handleHydrograteFormSubmit(e) {
     e.preventDefault();
 
-    const deviceId = document.getElementById('hydrograte-id').value;
+    const oldDeviceId = document.getElementById('hydrograte-id').value;
     const name = document.getElementById('device-name').value;
     const location = document.getElementById('device-loc').value;
-    const model = document.getElementById('device-model').value;
-    const serial = document.getElementById('device-serial').value;
-    const firmware = document.getElementById('device-firmware').value;
-    const sensors = parseInt(document.getElementById('device-sensors').value);
     const maxWaterLevel = parseFloat(document.getElementById('device-max-water').value);
     const installationDate = document.getElementById('device-install-date').value;
 
-    if (deviceId) {
-        const device = hydrogrates.find(function(h) { return h.id == deviceId; });
-        if (device) {
-            device.name = name;
-            device.location = location;
-            device.model = model;
-            device.serial = serial;
-            device.firmware = firmware;
-            device.sensors = sensors;
-            device.maxWaterLevel = maxWaterLevel;
-            device.installationDate = installationDate;
+    // Generate new ID from name
+    const slug = slugify(name);
+    const newDeviceId = slug ? 'gate_' + slug : 'gate_' + Date.now();
+    
+    // Check if we are creating a new device or editing an existing one
+    const isNewDevice = !oldDeviceId;
+    const finalDeviceId = isNewDevice ? newDeviceId : oldDeviceId;
+
+    const deviceData = {
+        name: name,
+        location: location,
+        maxWaterLevel: maxWaterLevel,
+        installationDate: installationDate,
+        updated_at: new Date().toISOString()
+    };
+
+    if (window.firestoreDb) {
+        try {
+            // Case 1: New Device
+            if (isNewDevice) {
+                // Ensure ID uniqueness for new devices
+                let uniqueId = finalDeviceId;
+                let counter = 1;
+                let doc = await window.firestoreDb.collection('devices').doc(uniqueId).get();
+                while (doc.exists) {
+                    uniqueId = finalDeviceId + '_' + counter;
+                    doc = await window.firestoreDb.collection('devices').doc(uniqueId).get();
+                    counter++;
+                }
+                
+                await window.firestoreDb.collection('devices').doc(uniqueId).set(deviceData);
+                alert('New Hydrograte device created with ID: ' + uniqueId);
+            } 
+            // Case 2: Editing Existing Device
+            else {
+                // Check if user wants to migrate the ID (if name changed and it's an old-style ID)
+                const isOldStyleId = oldDeviceId.match(/^gate_\d+$/);
+                const shouldMigrate = isOldStyleId && oldDeviceId !== newDeviceId && 
+                                    confirm(`This device has an old numeric ID (${oldDeviceId}). Would you like to migrate it to a name-based ID (${newDeviceId})? \n\nThis will update all database records and user assignments.`);
+
+                if (shouldMigrate) {
+                    await migrateDeviceId(oldDeviceId, newDeviceId, deviceData);
+                } else {
+                    // Just update existing document
+                    await window.firestoreDb.collection('devices').doc(oldDeviceId).set(deviceData, { merge: true });
+                    alert('Hydrograte device updated successfully!');
+                }
+            }
+
+            closeHydrograteModal();
+            if (typeof updateStats === 'function') updateStats();
+        } catch (error) {
+            console.error('Error saving device:', error);
+            alert('Failed to save device: ' + error.message);
         }
-    } else {
-        hydrogrates.push({
-            id: nextHydrograteId++,
-            name: name,
-            location: location,
-            model: model,
-            serial: serial,
-            firmware: firmware,
-            sensors: sensors,
-            maxWaterLevel: maxWaterLevel,
-            installationDate: installationDate,
-            status: 'Online',
-            responseTime: Math.floor(Math.random() * 100) + 80,
-            lastPing: 'Just now',
-            waterLevel: 0,
-            lastCalibration: new Date().toISOString().split('T')[0],
-            nextCalibration: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            errorLogs: []
-        });
+    }
+}
+
+// Migration logic to safely rename a device ID across platforms
+async function migrateDeviceId(oldId, newId, deviceData) {
+    console.log(`Starting migration from ${oldId} to ${newId}...`);
+    
+    // 1. Check if newId already exists
+    const existingDoc = await window.firestoreDb.collection('devices').doc(newId).get();
+    if (existingDoc.exists) {
+        newId = newId + '_' + Math.floor(Math.random() * 1000);
     }
 
-    renderHydrogratesList();
-    closeHydrograteModal();
-    if (typeof updateStats === 'function') updateStats();
-    alert('Hydrograte device saved successfully!');
+    // 2. Copy Firestore Data
+    await window.firestoreDb.collection('devices').doc(newId).set(deviceData);
+    
+    // 3. Copy Realtime Database Data
+    if (window.db) {
+        const oldRtdbRef = window.db.ref('flood_monitoring/' + oldId);
+        const newRtdbRef = window.db.ref('flood_monitoring/' + newId);
+        const snapshot = await oldRtdbRef.once('value');
+        if (snapshot.exists()) {
+            await newRtdbRef.set(snapshot.val());
+        } else {
+            // Initialize if it doesn't exist
+            await newRtdbRef.set({
+                floodgate_status: 'open',
+                last_updated: new Date().toLocaleTimeString(),
+                sensor_warning: false,
+                water_level: 'safe',
+                water_level_m: 0.1
+            });
+        }
+    }
+
+    // 4. Update User Assignments in Firestore
+    const userSnapshot = await window.firestoreDb.collection('users')
+        .where('assigned_gate_id', '==', oldId).get();
+    
+    const branchPromises = [];
+    userSnapshot.forEach(doc => {
+        branchPromises.push(doc.ref.update({ assigned_gate_id: newId }));
+    });
+    await Promise.all(branchPromises);
+
+    // 5. Delete Old Records
+    await window.firestoreDb.collection('devices').doc(oldId).delete();
+    if (window.db) {
+        await window.db.ref('flood_monitoring/' + oldId).remove();
+    }
+
+    alert(`Successfully migrated device to new ID: ${newId}. \n${userSnapshot.size} user(s) updated.`);
 }
 
 // Edit Hydrograte
@@ -356,10 +429,6 @@ function editHydrograte(id) {
     document.getElementById('hydrograte-id').value = device.id;
     document.getElementById('device-name').value = device.name;
     document.getElementById('device-loc').value = device.location;
-    document.getElementById('device-model').value = device.model;
-    document.getElementById('device-serial').value = device.serial;
-    document.getElementById('device-firmware').value = device.firmware;
-    document.getElementById('device-sensors').value = device.sensors;
     document.getElementById('device-max-water').value = device.maxWaterLevel;
     document.getElementById('device-install-date').value = device.installationDate;
 
@@ -370,22 +439,15 @@ function editHydrograte(id) {
 
 // Delete Hydrograte
 function deleteHydrograte(id) {
-    if (hydrogrates.length <= 1) {
-        alert('Cannot delete the last hydrograte device!');
-        return;
-    }
-
-    if (confirm('Are you sure you want to delete this hydrograte device?')) {
-        hydrogrates = hydrogrates.filter(function(h) { return h.id !== id; });
-
-        if (selectedHydrograteId === id) {
-            selectedHydrograteId = hydrogrates[0].id;
-            hydrograteData = hydrogrates[0];
+    if (confirm('Are you sure you want to delete this hydrograte device? This will also remove its database record.')) {
+        if (window.firestoreDb) {
+            window.firestoreDb.collection('devices').doc(id).delete().then(function() {
+                alert('Device deleted successfully.');
+                if (typeof updateStats === 'function') updateStats();
+            }).catch(function(error) {
+                console.error('Error deleting device:', error);
+            });
         }
-
-        renderHydrogratesList();
-        renderHydrograteStatus();
-        if (typeof updateStats === 'function') updateStats();
     }
 }
 
@@ -395,9 +457,36 @@ function refreshHydrograteData() {
 
     hydrograteData.responseTime = Math.floor(Math.random() * 200) + 50;
     hydrograteData.lastPing = 'Just now';
-    hydrograteData.waterLevel = parseFloat((Math.random() * hydrograteData.maxWaterLevel).toFixed(2));
+    
+    // Generate a random unit between 0 and 25 (simulated meters)
+    const newWaterLevel = Math.floor(Math.random() * 26); 
+    hydrograteData.waterLevel = newWaterLevel;
+
+    // Determine status string based on 18m critical and 15m caution
+    let waterStatus = 'safe';
+    if (newWaterLevel >= 18) {
+        waterStatus = 'critical';
+    } else if (newWaterLevel >= 15) {
+        waterStatus = 'caution';
+    }
+
+    // Push to Firebase RTDB (direct mapping 1:1)
+    if (window.db && selectedHydrograteId) {
+        const floodRef = window.db.ref('flood_monitoring/' + selectedHydrograteId);
+        floodRef.update({
+            water_level_m: newWaterLevel,
+            water_level: waterStatus,
+            last_updated: new Date().toLocaleTimeString(),
+            sensor_warning: newWaterLevel >= 24 // Warning if near max 25
+        }).then(() => {
+            console.log('RTDB updated with new water level:', newWaterLevel);
+        }).catch(err => {
+            console.error('Error updating RTDB:', err);
+        });
+    }
 
     renderHydrograteStatus();
+
 
     const btn = document.getElementById('refresh-hydrograte');
     if (btn) {

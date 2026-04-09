@@ -33,7 +33,8 @@ function normalizeUserDoc(id, data) {
         status: normalizeStatus(data.status),
         joined: data.joined || 'N/A',
         pushNotificationsEnabled: Boolean(data.pushNotificationsEnabled),
-        smsNotificationsEnabled: Boolean(data.smsNotificationsEnabled)
+        smsNotificationsEnabled: Boolean(data.smsNotificationsEnabled),
+        assigned_gate_id: data.assigned_gate_id || ''
     };
 }
 
@@ -131,7 +132,42 @@ function openAddUserModal() {
     document.getElementById('password').closest('.form-group').style.display = 'block';
     document.getElementById('password').required = true;
     document.getElementById('modal-title').textContent = 'Add New User';
+    
+    // Populate device dropdown
+    populateDeviceDropdown();
+    
     document.getElementById('user-modal').classList.add('active');
+}
+
+// Populate Device Dropdown
+async function populateDeviceDropdown(selectedId = '') {
+    const gateSelect = document.getElementById('assigned-gate');
+    if (!gateSelect) return;
+
+    const firestoreDb = window.firestoreDb;
+    if (!firestoreDb) return;
+
+    try {
+        const snapshot = await firestoreDb.collection('devices').get();
+        
+        // Keep the "None" option
+        gateSelect.innerHTML = '<option value="">None (No Device Assigned)</option>';
+        
+        snapshot.forEach(doc => {
+            const device = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = `${device.name || 'Unnamed'} (${device.location || 'No Location'})`;
+            gateSelect.appendChild(option);
+        });
+
+        // Set selected value if provided
+        if (selectedId) {
+            gateSelect.value = selectedId;
+        }
+    } catch (error) {
+        console.error("Error populating device dropdown:", error);
+    }
 }
 
 // Close User Modal
@@ -165,6 +201,7 @@ async function handleUserFormSubmit(e) {
                 email,
                 role,
                 status,
+                assigned_gate_id: document.getElementById('assigned-gate').value,
                 updatedAt: new Date().toISOString()
             });
             if (typeof window.writeAuditLog === 'function') {
@@ -195,6 +232,7 @@ async function handleUserFormSubmit(e) {
                 email,
                 role,
                 status,
+                assigned_gate_id: document.getElementById('assigned-gate').value,
                 joined: new Date().toISOString().split('T')[0],
                 phone: '',
                 pushNotificationsEnabled: true,
@@ -302,6 +340,10 @@ window.editUser = function(id) {
     pwdInput.closest('.form-group').style.display = 'none';
 
     document.getElementById('modal-title').textContent = 'Edit User';
+
+    // Populate device dropdown and set selected value
+    populateDeviceDropdown(user.assigned_gate_id);
+
     document.getElementById('user-modal').classList.add('active');
 };
 

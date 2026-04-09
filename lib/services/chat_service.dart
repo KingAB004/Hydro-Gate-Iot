@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -15,20 +17,27 @@ class ChatService {
       throw Exception('Gemini API key is not configured in .env file.');
     }
 
-    // 1. Fetch real-time flood monitoring data from Firebase
-    final floodRef = FirebaseDatabase.instance.ref('flood_monitoring');
-    final event = await floodRef.once();
-    String floodContext = 'Flood monitoring data is currently unavailable.';
-    if (event.snapshot.exists) {
-      final data = event.snapshot.value as Map<dynamic, dynamic>;
-      final waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
-      final waterLevelM = (data['water_level_m'] ?? 0).toDouble();
-      final gateStatus = data['floodgate_status'] ?? 'unknown';
-      final waterLevel = data['water_level'] ?? 'unknown';
-      final lastUpdated = data['last_updated'] ?? 'unknown';
+    // 1. Fetch the current user's assigned gate ID
+    final user = FirebaseAuth.instance.currentUser;
+    String? assignedGateId;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      assignedGateId = userDoc.data()?['assigned_gate_id'];
+    }
 
-      floodContext = '''
-Current Flood Monitoring Status:
+    String floodContext = 'Flood monitoring data is currently unavailable.';
+    if (assignedGateId != null) {
+      final floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$assignedGateId');
+      final event = await floodRef.once();
+      if (event.snapshot.exists) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>;
+        final waterLevelM = (data['water_level_m'] ?? 0).toDouble();
+        final gateStatus = data['floodgate_status'] ?? 'unknown';
+        final waterLevel = data['water_level'] ?? 'unknown';
+        final lastUpdated = data['last_updated'] ?? 'unknown';
+
+        floodContext = '''
+Current Flood Monitoring Status (Device: $assignedGateId):
 - Water Height: ${waterLevelM.toStringAsFixed(3)} meters
 - Water Level Status: $waterLevel
 - Floodgate Status: $gateStatus
@@ -39,6 +48,7 @@ Water Level Thresholds:
 - Caution: 15.1m to 17.9m
 - Critical: 18.0m and above
 ''';
+      }
     }
 
     // 2. Fetch current weather data
@@ -83,7 +93,7 @@ Instructions:
     _model = GenerativeModel(
       model: 'gemini-flash-latest',
       apiKey: apiKey,
-      systemInstruction: Content.system(systemPrompt),
+      systemInstruction: Content('system', [TextPart(systemPrompt)]),
     );
     _chat = _model!.startChat();
   }
