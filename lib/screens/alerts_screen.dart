@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/formatters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/audit_log_service.dart';
@@ -337,7 +338,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             // Map Firestore data to an internally usable object concept
             final String title = data['title'] ?? 'Announcement';
             // Fallback to 'description' if 'message' is missing (for backward compatibility)
-            final String message = data['message'] ?? data['description'] ?? '';
+            final String message = formatGateId(data['message'] ?? data['description'] ?? '');
             final String rawType = data['type'] ?? 'info';
             final Timestamp? timestamp = data['timestamp'] as Timestamp?;
             final DateTime dt = timestamp?.toDate() ?? DateTime.now();
