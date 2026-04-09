@@ -39,7 +39,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
   WeatherForecast? _weatherForecast;
   bool _isLoading = true;
   String? _error;
-  String _cityName = 'Philippines'; // Default city
+  String _cityName = 'Marikina'; // Default city
   String _username = 'User';
   String _role = 'Homeowner';
 

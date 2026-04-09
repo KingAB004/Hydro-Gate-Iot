@@ -54,10 +54,10 @@ Water Level Thresholds:
     // 2. Fetch current weather data
     String weatherContext = 'Weather data is currently unavailable.';
     try {
-      final forecast = await _weatherService.getCompleteWeather('Philippines');
+      final forecast = await _weatherService.getCompleteWeather('Marikina');
       final current = forecast.currentWeather;
       weatherContext = '''
-Current Weather Conditions (Philippines):
+Current Weather Conditions (Marikina):
 - Temperature: ${current.temperature.toStringAsFixed(1)}°C
 - Feels Like: ${current.feelsLike.toStringAsFixed(1)}°C
 - Description: ${current.description}
