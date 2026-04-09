@@ -195,8 +195,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     _buildEmergencyFloodgateControl(),
                     const SizedBox(height: 20),
                     _buildWaterLevelMonitorCard(),
-                    const SizedBox(height: 20),
-                    _buildRainfallInfoCard(),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -713,85 +711,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         const Spacer(),
         Text(range, style: const TextStyle(fontSize: 13, color: textSecondary, fontWeight: FontWeight.w500)),
       ],
-    );
-  }
-
-  Widget _buildRainfallInfoCard() {
-    String value = '0';
-    String unit = 'mm/hr';
-    String condition = 'Loading...';
-    IconData icon = Icons.cloud_outlined;
-
-    if (!_isLoadingWeather && _weatherForecast != null) {
-      final current = _weatherForecast!.currentWeather;
-      final rainfallText = WeatherUtils.getRainfallInfo(current.description, current.main);
-      final parts = rainfallText.split(' ');
-      value = parts.isNotEmpty ? parts[0] : '0';
-      unit = parts.length > 1 ? parts.sublist(1).join(' ') : 'mm/hr';
-      condition = WeatherUtils.capitalizeDescription(current.description);
-      icon = WeatherUtils.getWeatherIcon(current.icon, current.main);
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B), // Dark sleek color
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: brandBlue, size: 24),
-              ),
-              const SizedBox(width: 16),
-              const Text(
-                'Local Weather & Rainfall',
-                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              if (_isLoadingWeather)
-                const Padding(
-                  padding: EdgeInsets.only(left: 12.0),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(color: brandBlue, strokeWidth: 2),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(unit, style: const TextStyle(fontSize: 16, color: brandBlue, fontWeight: FontWeight.w600)),
-                    Text(condition, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
