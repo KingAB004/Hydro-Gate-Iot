@@ -12,13 +12,20 @@ const firebaseConfig = {
 
 // Initialize primary Firebase
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-const firestoreDb = firebase.firestore();
+const auth = (typeof firebase.auth === 'function') ? firebase.auth() : null;
+const db = (typeof firebase.database === 'function') ? firebase.database() : null;
+const firestoreDb = (typeof firebase.firestore === 'function') ? firebase.firestore() : null;
 
 // Initialize secondary Firebase app for creating users without signing out the current user
-const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
-const secondaryAuth = secondaryApp.auth();
+let secondaryAuth = null;
+try {
+  if (typeof firebase.auth === 'function') {
+    const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+    secondaryAuth = secondaryApp.auth();
+  }
+} catch (e) {
+  // ignore if it already exists
+}
 
 // Export instances to be used in other files
 window.firebaseConfig = firebaseConfig;

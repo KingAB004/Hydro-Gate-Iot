@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HydroGate Admin Login</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="auth-body">
+    <main class="auth-shell" aria-label="Admin sign in">
+        <section class="card auth-card">
+            <div class="auth-brand">
+                <div class="auth-mark" aria-hidden="true">
+                    <i data-lucide="droplet" class="auth-mark-icon"></i>
+                </div>
+                <h1 class="auth-title">HydroGate</h1>
+                <p class="auth-subtitle">Admin Sign In</p>
+            </div>
+
+            <div id="login-message" class="auth-message" aria-live="polite"></div>
+
+            <form id="admin-login-form" class="auth-form">
+                <div class="auth-field">
+                    <label for="admin-email" class="auth-label">Email</label>
+                    <input
+                        id="admin-email"
+                        class="auth-input"
+                        type="email"
+                        inputmode="email"
+                        autocomplete="email"
+                        placeholder="admin@hydrogate.com"
+                        required
+                    />
+                </div>
+
+                <div class="auth-field">
+                    <label for="admin-password" class="auth-label">Password</label>
+                    <div class="auth-password">
+                        <input
+                            id="admin-password"
+                            class="auth-input"
+                            type="password"
+                            autocomplete="current-password"
+                            placeholder="Enter your password"
+                            required
+                        />
+                        <button type="button" class="btn auth-toggle" id="toggle-password" aria-label="Toggle password visibility">
+                            <i data-lucide="eye" class="auth-toggle-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-submit" id="admin-login-submit">
+                    <i data-lucide="log-in"></i>
+                    Sign In
+                </button>
+
+                <p class="auth-footnote">Only accounts with role <strong>Admin</strong> can access this panel.</p>
+            </form>
+        </section>
+    </main>
+
+    <!-- Firebase Scripts (Compat Version for file:// support) -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
+    <script>lucide.createIcons();</script>
+
+    <!-- App Scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/admin_login.js"></script>
+</body>
+</html>

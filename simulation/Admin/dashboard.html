@@ -59,6 +59,11 @@
                 <div class="header-left">
                     <h2 id="page-title">Dashboard Overview</h2>
                 </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary" id="admin-logout-btn" title="Sign out">
+                        <i data-lucide="log-out"></i> Logout
+                    </button>
+                </div>
             </header>
 
             <!-- Tabs Content -->
@@ -327,10 +332,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="device-branch">Branch:</label>
-                                    <select id="device-branch" required>
-                                        <option value="Barangka">Barangka</option>
-                                        <option value="Marikina">Marikina</option>
-                                    </select>
+                                    <input type="text" id="device-branch" placeholder="e.g., Marikina - Tumana" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="device-loc">Location:</label>
@@ -640,6 +642,25 @@
                 <button type="button" class="btn btn-secondary" id="cancel-confirm-delete">Cancel</button>
                 <button type="button" class="btn btn-danger" id="confirm-confirm-delete">
                     <i data-lucide="trash-2"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Action Modal (Reusable) -->
+    <div id="confirm-action-modal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirm-action-title">Confirm</h3>
+                <button class="close-btn" id="close-confirm-action-modal">&times;</button>
+            </div>
+
+            <p class="modal-subtext" id="confirm-action-message"></p>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-confirm-action">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-confirm-action">
+                    <i data-lucide="check"></i> Confirm
                 </button>
             </div>
         </div>

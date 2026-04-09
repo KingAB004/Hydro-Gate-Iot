@@ -572,7 +572,7 @@ async function handleHydrograteFormSubmit(e) {
 
     const oldDeviceId = document.getElementById('hydrograte-id').value;
     const name = document.getElementById('device-name').value;
-    const branch = document.getElementById('device-branch').value;
+    const branch = (document.getElementById('device-branch').value || '').toString().trim();
     const location = document.getElementById('device-loc').value;
     const maxWaterLevel = parseFloat(document.getElementById('device-max-water').value);
     const installationDate = document.getElementById('device-install-date').value;

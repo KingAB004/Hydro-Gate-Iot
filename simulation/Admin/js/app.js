@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Avoids browser confirm() for a consistent centered UX.
 let __confirmDeleteOnConfirm = null;
 
+// Reusable confirm-action modal (used for non-delete confirmations like Logout)
+let __confirmActionOnConfirm = null;
+
 function setupConfirmDeleteModal() {
     const modal = document.getElementById('confirm-delete-modal');
     if (!modal) return;
@@ -85,12 +88,97 @@ function setupConfirmDeleteModal() {
     };
 }
 
+function setupConfirmActionModal() {
+    const modal = document.getElementById('confirm-action-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-confirm-action-modal');
+    const cancelBtn = document.getElementById('cancel-confirm-action');
+    const confirmBtn = document.getElementById('confirm-confirm-action');
+
+    const close = function() {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        __confirmActionOnConfirm = null;
+        if (confirmBtn) {
+            confirmBtn.classList.remove('is-loading');
+            confirmBtn.disabled = false;
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) close();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function() {
+            if (typeof __confirmActionOnConfirm !== 'function') {
+                close();
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('is-loading');
+            if (cancelBtn) cancelBtn.disabled = true;
+
+            try {
+                const result = __confirmActionOnConfirm();
+                if (result && typeof result.then === 'function') {
+                    await result;
+                }
+                close();
+            } catch (err) {
+                console.error('Confirm action failed:', err);
+                close();
+            }
+        });
+    }
+
+    window.openConfirmActionModal = function(options) {
+        const titleEl = document.getElementById('confirm-action-title');
+        const messageEl = document.getElementById('confirm-action-message');
+        const confirmBtnEl = document.getElementById('confirm-confirm-action');
+
+        const title = (options && options.title) ? String(options.title) : 'Confirm';
+        const message = (options && options.message) ? String(options.message) : 'Are you sure you want to continue?';
+        const confirmText = (options && options.confirmText) ? String(options.confirmText) : 'Confirm';
+        const confirmIcon = (options && options.confirmIcon) ? String(options.confirmIcon) : 'check';
+        const confirmVariant = (options && options.confirmVariant) ? String(options.confirmVariant) : 'primary';
+        const onConfirm = options && options.onConfirm;
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        __confirmActionOnConfirm = (typeof onConfirm === 'function') ? onConfirm : null;
+
+        if (confirmBtnEl) {
+            confirmBtnEl.classList.remove('is-loading');
+            confirmBtnEl.disabled = false;
+
+            confirmBtnEl.classList.remove('btn-primary', 'btn-secondary', 'btn-danger');
+            if (confirmVariant === 'danger') confirmBtnEl.classList.add('btn-danger');
+            else if (confirmVariant === 'secondary') confirmBtnEl.classList.add('btn-secondary');
+            else confirmBtnEl.classList.add('btn-primary');
+
+            confirmBtnEl.innerHTML = '<i data-lucide="' + confirmIcon + '"></i> ' + confirmText;
+        }
+
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        if (window.lucide) window.lucide.createIcons();
+    };
+}
+
 function initApp() {
     // Setup tab navigation first so sidebar works even if other modules fail.
     setupTabNavigation();
 
     // Global reusable modal utilities
     setupConfirmDeleteModal();
+    setupConfirmActionModal();
 
     const safeCall = function(label, fn) {
         try {
@@ -120,6 +208,36 @@ function initApp() {
     // Setup refresh button
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) refreshBtn.addEventListener('click', refreshAllData);
+
+    // Admin logout
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            if (typeof window.openConfirmActionModal !== 'function') {
+                window.location.replace('login.html');
+                return;
+            }
+
+            window.openConfirmActionModal({
+                title: 'Confirm Logout',
+                message: 'Are you sure you want to logout?',
+                confirmText: 'Logout',
+                confirmIcon: 'log-out',
+                confirmVariant: 'primary',
+                onConfirm: async function() {
+                    try {
+                        if (window.auth && typeof window.auth.signOut === 'function') {
+                            await window.auth.signOut();
+                        }
+                    } catch (e) {
+                        console.error('Logout failed:', e);
+                    } finally {
+                        window.location.replace('login.html');
+                    }
+                }
+            });
+        });
+    }
 }
 
 function initAdminProfile() {
