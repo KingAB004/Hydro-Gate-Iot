@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../widgets/alerts_dropdown.dart';
+import '../utils/notifications.dart';
 import '../services/weather_service.dart';
 import '../models/weather_models.dart';
 import '../utils/weather_utils.dart';
@@ -91,8 +92,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
     await _fetchWeatherData();
   }
 
-  void _showNotificationsDropdown() {
-    showDialog(
+  Future<void> _showNotificationsDropdown() async {
+    final result = await showDialog<String>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.2),
       builder: (context) => Stack(
@@ -108,6 +109,10 @@ class _WeatherScreenState extends State<WeatherScreen> {
         ],
       ),
     );
+
+    if (result == 'switch_tab_0' && mounted) {
+      SwitchTabNotification(0).dispatch(context);
+    }
   }
 
   @override

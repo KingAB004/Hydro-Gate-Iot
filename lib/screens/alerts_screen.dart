@@ -151,46 +151,69 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: bgLight,
-      child: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 12),
-              const Text(
-                'Recent announcements and warnings',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
+    final bool isStandalone = ModalRoute.of(context)?.canPop ?? false;
+
+    final Widget body = SafeArea(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(isStandalone),
+            const SizedBox(height: 12),
+            const Text(
+              'Recent announcements and warnings',
+              style: TextStyle(
+                fontSize: 15,
+                color: textSecondary,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 24),
-              _buildAnnouncementsList(),
-              const SizedBox(height: 80),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            _buildAnnouncementsList(),
+            const SizedBox(height: 80),
+          ],
         ),
       ),
     );
+
+    if (isStandalone) {
+      return Scaffold(
+        backgroundColor: bgLight,
+        body: body,
+      );
+    }
+
+    return Material(
+      color: bgLight,
+      child: body,
+    );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isStandalone) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
+            if (isStandalone)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: textPrimary, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
             Builder(
               builder: (context) => GestureDetector(
-                onTap: () => Scaffold.of(context).openDrawer(),
+                onTap: () {
+                  if (!isStandalone) {
+                    Scaffold.of(context).openDrawer();
+                  }
+                },
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -198,7 +221,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
                     ],
                   ),
-                  child: const Icon(Icons.menu_rounded, color: textPrimary, size: 22),
+                  child: Icon(isStandalone ? Icons.notifications_active_rounded : Icons.menu_rounded, color: isStandalone ? brandBlue : textPrimary, size: 22),
                 ),
               ),
             ),
@@ -206,9 +229,24 @@ class _AlertsScreenState extends State<AlertsScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('NOTIFICATIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.2)),
-                const SizedBox(height: 2),
-                const Text('Recent Updates', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
+                const Text(
+                  'NOTIFICATIONS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: textSecondary,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Text(
+                  'Recent Updates',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: textPrimary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
               ],
             ),
           ],
@@ -291,9 +329,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: snapshot.data!.docs.length,
+          itemCount: docs.length,
           itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
+            final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
 
             // Map Firestore data to an internally usable object concept

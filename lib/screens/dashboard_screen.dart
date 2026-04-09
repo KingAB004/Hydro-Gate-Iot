@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/alerts_dropdown.dart';
+import '../utils/notifications.dart';
 import '../services/weather_service.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
@@ -150,8 +151,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     }
   }
 
-  void _showNotificationsDropdown() {
-    showDialog(
+  Future<void> _showNotificationsDropdown() async {
+    final result = await showDialog<String>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.2),
       builder: (context) => Stack(
@@ -167,6 +168,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ],
       ),
     );
+
+    if (result == 'switch_tab_0' && mounted) {
+      SwitchTabNotification(0).dispatch(context);
+    }
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/alerts_screen.dart';
+import '../utils/notifications.dart';
 
 class AlertsDropdown extends StatelessWidget {
   const AlertsDropdown({super.key});
@@ -60,11 +61,7 @@ class AlertsDropdown extends StatelessWidget {
                 ),
                 GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AlertsScreen()),
-                    );
+                    Navigator.pop(context, 'switch_tab_0');
                   },
                   child: const Text(
                     'View All',
@@ -153,11 +150,7 @@ class AlertsDropdown extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AlertsScreen()),
-        );
+        Navigator.pop(context, 'switch_tab_0');
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

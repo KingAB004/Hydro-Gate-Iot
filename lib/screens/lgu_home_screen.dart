@@ -529,16 +529,6 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
             const Text('HydroGate Admin', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
           ],
         ),
-        GestureDetector(
-          onTap: () {
-             showDialog(context: context, builder: (context) => Stack(children: [Positioned(top: 60, right: 16, child: Material(color: Colors.transparent, child: const AlertsDropdown()))]));
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
-            child: const Icon(Icons.notifications_none_rounded, color: textPrimary, size: 22),
-          ),
-        ),
       ],
     );
   }
