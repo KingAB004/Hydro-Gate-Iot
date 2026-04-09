@@ -132,7 +132,8 @@ class AuthWrapper extends StatelessWidget {
                 role = data?['role']?.toString() ?? 'Homeowner';
               }
               
-              if (role.trim().toUpperCase() == 'LGU') {
+              final roleTag = role.trim().toUpperCase();
+              if (roleTag == 'LGU' || roleTag == 'ADMIN') {
                 return const LGUDashboardScreen();
               }
               return const MainHomeScreen();

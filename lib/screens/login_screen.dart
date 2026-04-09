@@ -58,21 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Audit log write failed: $e');
         }
 
-        Widget nextScreen = role.trim().toUpperCase() == 'LGU' ? const LGUDashboardScreen() : const MainHomeScreen();
-
-        // Temporary Debug SnackBar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('DEBUG: Role fetched is "$role"'),
-            backgroundColor: Colors.blueGrey,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          PageTransitions.slideFadeRoute(nextScreen),
-        );
+        // Redirection is handled automatically by AuthWrapper in main.dart
       }
     } catch (e) {
       try {
@@ -139,21 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Audit log write failed: $e');
         }
 
-        Widget nextScreen = role.trim().toUpperCase() == 'LGU' ? const LGUDashboardScreen() : const MainHomeScreen();
-
-        // Temporary Debug SnackBar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('DEBUG: Role fetched is "$role"'),
-            backgroundColor: Colors.blueGrey,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          PageTransitions.slideFadeRoute(nextScreen),
-        );
+        // Redirection is handled automatically by AuthWrapper in main.dart
       }
     } on FirebaseAuthException catch (e) {
       try {

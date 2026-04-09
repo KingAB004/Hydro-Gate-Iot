@@ -24,9 +24,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   bool isGateOpen = true;
-  double waterHeightCm = 1500; // Default 15m
   double waterLevelM = 0.0;
-  String waterLevelStatus = 'Normal';
   String lastUpdated = '';
   
   // Realtime Database reference (null until device is loaded)
@@ -129,10 +127,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   final data = event.snapshot.value as Map<dynamic, dynamic>;
                   setState(() {
                     isGateOpen = data['floodgate_status'] != 'closed';
-                    waterHeightCm = (data['water_height_cm'] ?? 0).toDouble();
-                    // Read the meter value directly (1:1 mapping with database)
+                    // Read the meter value directly
                     waterLevelM = (data['water_level_m'] ?? 0).toDouble();
-                    waterLevelStatus = data['water_level']?.toString() ?? 'Normal';
                     lastUpdated = data['last_updated']?.toString() ?? '';
                     _isLoadingDevice = false;
                   });
@@ -175,11 +171,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgLight,
-      drawer: _buildDrawer(),
-
-      body: SafeArea(
+    return Material(
+      color: bgLight,
+      child: SafeArea(
         child: _isLoadingDevice 
           ? const Center(child: CircularProgressIndicator(color: brandBlue))
           : assignedGateId == null
@@ -292,11 +286,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Builder(
               builder: (context) => GestureDetector(
@@ -305,70 +298,38 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
                     ],
                   ),
-                  child: const Icon(Icons.menu_rounded, color: textPrimary, size: 24),
+                  child: const Icon(Icons.menu_rounded, color: textPrimary, size: 22),
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: _showNotificationsDropdown,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    const Icon(Icons.notifications_none_rounded, color: textPrimary, size: 24),
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: dangerRed,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('MONITOR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.2)),
+                const SizedBox(height: 2),
+                Text('Hello, ${_username.split(' ')[0]}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: 'Welcome Back, ',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: textSecondary,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              TextSpan(
-                text: '${_username.split(' ')[0]}!',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: textPrimary,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
+        GestureDetector(
+          onTap: _showNotificationsDropdown,
+          child: Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: const Icon(Icons.notifications_none_rounded, color: textPrimary, size: 24),
           ),
         ),
       ],
@@ -829,176 +790,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: cardWhite,
-      child: Column(
-        children: [
-          _buildDrawerHeader(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                _buildDrawerItem(icon: Icons.manage_accounts_rounded, title: 'Account', onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                  );
-                }),
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8), child: Divider()),
-                _buildDrawerItem(icon: Icons.logout_rounded, title: 'Logout', onTap: () async {
-                  Navigator.pop(context);
-                  await AuditLogService().logEvent(
-                    action: 'logout',
-                    severity: 'safe',
-                    description: 'User logged out',
-                    role: _role,
-                  );
-                  await AuthService().signOut();
-                  if (context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => WelcomeScreen()),
-                      (route) => false,
-                    );
-                  }
-                }, isDestructive: true),
-                if (_role == 'Admin')
-                  _buildDrawerItem(icon: Icons.receipt_long_rounded, title: 'Audit Logs', onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AuditLogsScreen()),
-                    );
-                  }),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDrawerHeader() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      return _buildDrawerHeaderContent(
-        username: _username,
-        email: _email,
-        role: _role,
-      );
-    }
-
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
-      builder: (context, snapshot) {
-        String username = _username;
-        String role = _role;
-        final String email = user.email ?? _email;
-
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data() as Map<String, dynamic>?;
-          if (data != null) {
-            username = data['username'] ?? username;
-            role = data['role'] ?? role;
-          }
-        }
-
-        return _buildDrawerHeaderContent(
-          username: username,
-          email: email,
-          role: role,
-        );
-      },
-    );
-  }
-
-  Widget _buildDrawerHeaderContent({required String username, required String email, required String role}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 56, 24, 24),
-      color: const Color(0xFF0F172A),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.08),
-              border: Border.all(color: brandBlue, width: 2),
-            ),
-            child: const Icon(Icons.person_rounded, size: 34, color: brandBlue),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            username,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(email, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7))),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              role.toUpperCase(),
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem({required IconData icon, required String title, required VoidCallback onTap, bool isDestructive = false}) {
-    final color = isDestructive ? dangerRed : textPrimary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isDestructive ? dangerRed.withOpacity(0.04) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isDestructive ? dangerRed.withOpacity(0.18) : Colors.black.withOpacity(0.05),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isDestructive ? dangerRed.withOpacity(0.12) : brandBlue.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color)),
-                ),
-                Icon(Icons.chevron_right_rounded, color: textSecondary.withOpacity(0.6), size: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildNoDeviceState() {
     return Center(

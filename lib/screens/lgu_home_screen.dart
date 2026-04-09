@@ -365,7 +365,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
     try {
       await _announcementsRef.add({
         'title': title,
-        'description': desc,
+        'message': desc, // Standardized key
         'type': _selectedPriority,
         'timestamp': FieldValue.serverTimestamp(),
         'gateId': _assignedGateId, // GATE SCOPING
@@ -376,6 +376,47 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Announcement broadcasted successfully')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _cleanupDatabase() async {
+    try {
+      final rootRef = FirebaseDatabase.instance.ref('flood_monitoring');
+      
+      // 1. Remove dangling root keys
+      await rootRef.update({
+        'floodgate_status': null,
+        'last_updated': null,
+        'sensor_warning': null,
+        'water_level': null,
+        'water_level_m': null,
+      });
+
+      // 2. Cleanup inside gate buckets
+      final snapshot = await rootRef.get();
+      if (snapshot.exists && snapshot.value is Map) {
+        final gates = snapshot.value as Map;
+        for (var gateId in gates.keys) {
+          if (gateId.toString().startsWith('gate_')) {
+            await rootRef.child(gateId).update({
+              'sensor_warning': null,
+              'water_level': null,
+            });
+          }
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Database cleanup successful! Optimized keys removed.'), backgroundColor: successGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cleanup failed: $e'), backgroundColor: dangerRed),
+        );
+      }
     }
   }
 
@@ -402,13 +443,45 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           _buildProfileItem('Station ID', _assignedGateId ?? 'None Assigned', Icons.sensors_rounded),
           _buildProfileItem('Account Status', 'Active', Icons.verified_user_rounded, valueColor: successGreen),
           const SizedBox(height: 32),
+
+          // Database Maintenance Section
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text('DATABASE MAINTENANCE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.0)),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black.withOpacity(0.04))),
+            child: Column(
+              children: [
+                const Text('Remove redundant keys (sensor_warning, water_level) to optimize storage.', style: TextStyle(fontSize: 12, color: textSecondary)),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _cleanupDatabase,
+                    icon: const Icon(Icons.cleaning_services_rounded, size: 18),
+                    label: const Text('Sync & Cleanup Keys', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: brandTeal,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
             height: 56,
             child: OutlinedButton.icon(
               onPressed: () async {
                 await AuthService().signOut();
-                if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const WelcomeScreen()));
               },
               icon: const Icon(Icons.logout_rounded, color: dangerRed),
               label: const Text('Logout', style: TextStyle(color: dangerRed, fontWeight: FontWeight.w800)),

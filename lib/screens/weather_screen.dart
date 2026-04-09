@@ -7,6 +7,8 @@ import '../utils/weather_utils.dart';
 import 'main_home_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/chatbot_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class WeatherScreen extends StatefulWidget {
@@ -37,11 +39,31 @@ class _WeatherScreenState extends State<WeatherScreen> {
   bool _isLoading = true;
   String? _error;
   String _cityName = 'Philippines'; // Default city
+  String _username = 'User';
+  String _role = 'Homeowner';
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _fetchWeatherData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && mounted) {
+          setState(() {
+            _username = doc.data()?['username'] ?? 'User';
+            _role = doc.data()?['role'] ?? 'Homeowner';
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading user data: $e');
+      }
+    }
   }
 
   Future<void> _fetchWeatherData() async {
@@ -90,10 +112,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgLight,
-
-      body: SafeArea(
+    return Material(
+      color: bgLight,
+      child: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshWeather,
           color: brandBlue,
@@ -129,52 +150,49 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   Widget _buildHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () {
-              final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
-              if (mainScreen != null) {
-                mainScreen.navigateToHome();
-              }
-            },
-            color: textPrimary,
-            iconSize: 20,
-          ),
-        ),
-        const Expanded(
-          child: Text(
-            'Weather',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: textPrimary,
-              letterSpacing: -0.5,
+        Row(
+          children: [
+            Builder(
+              builder: (context) => GestureDetector(
+                onTap: () => Scaffold.of(context).openDrawer(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: const Icon(Icons.menu_rounded, color: textPrimary, size: 22),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('FORECAST', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.2)),
+                const SizedBox(height: 2),
+                Text('Weather Summary', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
+              ],
+            ),
+          ],
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: _showNotificationsDropdown,
-            color: textPrimary,
-            iconSize: 24,
+        GestureDetector(
+          onTap: _showNotificationsDropdown,
+          child: Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: const Icon(Icons.notifications_none_rounded, color: textPrimary, size: 24),
           ),
         ),
       ],

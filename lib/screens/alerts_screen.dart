@@ -28,6 +28,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   int _refreshKey = 0; // Key to force refresh stream
   String _role = 'Homeowner';
+  String _username = 'User';
   String? _currentUserId;
   bool _isLoadingRole = true;
   String? _assignedGateId;
@@ -46,6 +47,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       if (doc.exists && mounted) {
         setState(() {
           _role = doc.data()?['role'] ?? 'Homeowner';
+          _username = doc.data()?['username'] ?? 'User';
           _assignedGateId = doc.data()?['assigned_gate_id'];
           _isLoadingRole = false;
         });
@@ -149,10 +151,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgLight,
-
-      body: SafeArea(
+    return Material(
+      color: bgLight,
+      child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -181,59 +182,52 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   Widget _buildHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              } else {
-                final MainHomeScreenState? mainScreen = context.findAncestorStateOfType<MainHomeScreenState>();
-                if (mainScreen != null) {
-                  mainScreen.navigateToHome();
-                }
-              }
-            },
-            color: textPrimary,
-            iconSize: 20,
-          ),
+        Row(
+          children: [
+            Builder(
+              builder: (context) => GestureDetector(
+                onTap: () => Scaffold.of(context).openDrawer(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: const Icon(Icons.menu_rounded, color: textPrimary, size: 22),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('NOTIFICATIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.2)),
+                const SizedBox(height: 2),
+                const Text('Recent Updates', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
+              ],
+            ),
+          ],
         ),
-        const Expanded(
-          child: Text(
-            'Alerts',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: textPrimary,
-              letterSpacing: -0.5,
+        if (_role == 'Admin' || _role == 'LGU')
+          GestureDetector(
+            onTap: _deleteAllAlerts,
+            child: Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: const Icon(Icons.delete_sweep_rounded, color: dangerRed, size: 24),
             ),
           ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: cardWhite,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.delete_sweep_rounded),
-            onPressed: _deleteAllAlerts,
-            color: dangerRed,
-            iconSize: 24,
-          ),
-        ),
-        const SizedBox(width: 12),
       ],
     );
   }
@@ -251,7 +245,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('announcements');
 
     // Filter by gateId
-    query = query.where('gateId', isEqualTo: _assignedGateId).orderBy('timestamp', descending: true);
+    query = query.where('gateId', isEqualTo: _assignedGateId);
 
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey(_refreshKey),
@@ -284,6 +278,16 @@ class _AlertsScreenState extends State<AlertsScreen> {
           );
         }
 
+        // Sort client-side to avoid index requirements
+        final docs = snapshot.data!.docs.toList();
+        docs.sort((a, b) {
+          final aTime = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+          final bTime = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          return bTime.compareTo(aTime); // Descending
+        });
+
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -294,7 +298,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
             // Map Firestore data to an internally usable object concept
             final String title = data['title'] ?? 'Announcement';
-            final String message = data['message'] ?? '';
+            // Fallback to 'description' if 'message' is missing (for backward compatibility)
+            final String message = data['message'] ?? data['description'] ?? '';
             final String rawType = data['type'] ?? 'info';
             final Timestamp? timestamp = data['timestamp'] as Timestamp?;
             final DateTime dt = timestamp?.toDate() ?? DateTime.now();
@@ -403,137 +408,121 @@ class _AlertsScreenState extends State<AlertsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: cardWhite,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors['border']!, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: colors['shadow']!,
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: colors['border']!, width: 1.5),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left color indicator
-              Container(
-                width: 6,
-                color: colors['primary'],
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colors['bg'],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: colors['primary'], size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: colors['bg'],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              icon,
-                              color: colors['primary'],
-                              size: 24,
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        title,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: colors['bg'],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        priority.name.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: colors['primary'],
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  body,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: textSecondary,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 1),
+                          Text(
+                            location,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: textSecondary.withOpacity(0.7),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.only(top: 16),
-                        decoration: BoxDecoration(
-                          border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time_rounded, size: 14, color: textSecondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              _getTimeAgo(timestamp),
-                              style: const TextStyle(fontSize: 12, color: textSecondary, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(width: 4, height: 4, decoration: const BoxDecoration(shape: BoxShape.circle, color: textSecondary)),
-                            const SizedBox(width: 12),
-                            const Icon(Icons.person_pin, size: 14, color: textSecondary),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                location,
-                                style: const TextStyle(fontSize: 12, color: textSecondary, fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colors['bg'],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        priority.name.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: colors['primary'],
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                if (body.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    body,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF475569),
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors['bg']!.withOpacity(0.3),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.access_time_rounded, size: 14, color: textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  _getTimeAgo(timestamp),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: textSecondary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-            ],
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded, size: 16, color: colors['primary']!.withOpacity(0.5)),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -542,31 +531,31 @@ class _AlertsScreenState extends State<AlertsScreen> {
     switch (priority) {
       case AlertPriority.high:
         return {
-          'primary': dangerRed,
-          'bg': dangerRed.withOpacity(0.1),
-          'border': dangerRed.withOpacity(0.2),
-          'shadow': dangerRed.withOpacity(0.05),
+          'primary': const Color(0xFFEF4444),
+          'bg': const Color(0xFFFEF2F2),
+          'border': const Color(0xFFFEE2E2),
+          'shadow': const Color(0xFFEF4444).withOpacity(0.04),
         };
       case AlertPriority.medium:
         return {
-          'primary': warningOrange,
-          'bg': warningOrange.withOpacity(0.1),
-          'border': warningOrange.withOpacity(0.2),
-          'shadow': warningOrange.withOpacity(0.05),
+          'primary': const Color(0xFFF59E0B),
+          'bg': const Color(0xFFFFFBEB),
+          'border': const Color(0xFFFEF3C7),
+          'shadow': const Color(0xFFF59E0B).withOpacity(0.04),
         };
       case AlertPriority.info:
         return {
-          'primary': infoBlue,
-          'bg': infoBlue.withOpacity(0.1),
-          'border': infoBlue.withOpacity(0.2),
-          'shadow': infoBlue.withOpacity(0.05),
+          'primary': const Color(0xFF007EAA),
+          'bg': const Color(0xFFF0F9FF),
+          'border': const Color(0xFFE0F2FE),
+          'shadow': const Color(0xFF007EAA).withOpacity(0.04),
         };
       case AlertPriority.low:
         return {
-          'primary': successGreen,
-          'bg': successGreen.withOpacity(0.1),
-          'border': successGreen.withOpacity(0.2),
-          'shadow': successGreen.withOpacity(0.02),
+          'primary': const Color(0xFF10B981),
+          'bg': const Color(0xFFF0FDF4),
+          'border': const Color(0xFFDCFCE7),
+          'shadow': const Color(0xFF10B981).withOpacity(0.02),
         };
     }
   }
@@ -578,11 +567,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
-      return '\m ago';
+      return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
-      return '\h ago';
+      return '${difference.inHours}h ago';
     } else {
-      return '\d ago';
+      return '${difference.inDays}d ago';
     }
   }
 }

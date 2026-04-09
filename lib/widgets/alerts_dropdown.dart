@@ -92,8 +92,6 @@ class AlertsDropdown extends StatelessWidget {
                   stream: FirebaseFirestore.instance
                       .collection('announcements')
                       .where('gateId', isEqualTo: assignedGateId) // FILTER BY GATE ID
-                      .orderBy('timestamp', descending: true)
-                      .limit(5)
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -107,7 +105,15 @@ class AlertsDropdown extends StatelessWidget {
                       return _buildEmptyState();
                     }
 
-                    final docs = snapshot.data!.docs;
+                    // Sort client-side to avoid index requirement
+                    final docs = snapshot.data!.docs.toList();
+                    docs.sort((a, b) {
+                      final aTime = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+                      final bTime = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+                      if (aTime == null) return 1;
+                      if (bTime == null) return -1;
+                      return bTime.compareTo(aTime); // Descending
+                    });
 
                     return ListView.builder(
                       shrinkWrap: true,
@@ -143,7 +149,7 @@ class AlertsDropdown extends StatelessWidget {
   }
 
   Widget _buildAlertItem(BuildContext context, String title, AlertPriority priority, DateTime timestamp) {
-    final tagColor = _getPriorityColor(priority);
+    final Color priorityColor = _getPriorityColor(priority);
 
     return InkWell(
       onTap: () {
@@ -154,20 +160,24 @@ class AlertsDropdown extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1),
+            bottom: BorderSide(color: Colors.grey.withOpacity(0.05), width: 1),
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 8,
-              height: 8,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: tagColor,
+                color: priorityColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                priority == AlertPriority.high ? Icons.warning_rounded : Icons.notifications_rounded,
+                size: 16,
+                color: priorityColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -178,28 +188,30 @@ class AlertsDropdown extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF1E293B),
+                      letterSpacing: -0.1,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     _getTimeAgo(timestamp),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B).withOpacity(0.8),
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.chevron_right,
-              size: 20,
-              color: Colors.grey.shade400,
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: Colors.grey.shade300,
             ),
           ],
         ),
@@ -230,13 +242,13 @@ class AlertsDropdown extends StatelessWidget {
   Color _getPriorityColor(AlertPriority priority) {
     switch (priority) {
       case AlertPriority.high:
-        return highPriorityTag;
+        return const Color(0xFFEF4444);
       case AlertPriority.medium:
-        return mediumPriorityTag;
+        return const Color(0xFFF59E0B);
       case AlertPriority.info:
-        return infoPriorityTag;
+        return const Color(0xFF007EAA);
       case AlertPriority.low:
-        return lowPriorityTag;
+        return const Color(0xFF10B981);
     }
   }
 
@@ -247,11 +259,11 @@ class AlertsDropdown extends StatelessWidget {
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
-      return '\m ago';
+      return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
-      return '\h ago';
+      return '${difference.inHours}h ago';
     } else {
-      return '\d ago';
+      return '${difference.inDays}d ago';
     }
   }
 }
