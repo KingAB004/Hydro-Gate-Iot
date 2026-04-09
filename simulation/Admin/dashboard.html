@@ -380,18 +380,86 @@
                             <button class="btn btn-secondary timeframe-btn" data-timeframe="month">Month</button>
                         </div>
                     </div>
+
+                    <!-- Summary Stat Cards -->
+                    <div class="overview-grid" style="margin-bottom: 32px;">
+                        <div class="stat-card">
+                            <div class="stat-icon-wrap" id="stat-level-icon">
+                                <i data-lucide="waves" class="stat-icon"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Current Water Level</p>
+                                <p class="stat-value" id="stat-current-level">0.0m</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrap" style="background-color: #fef3c7; color: #f59e0b;">
+                                <i data-lucide="trending-up" class="stat-icon"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Peak Level (Session)</p>
+                                <p class="stat-value" id="stat-peak-level">0.0m</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrap" id="stat-gate-icon">
+                                <i data-lucide="shield" class="stat-icon"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Gate Status</p>
+                                <p class="stat-value" id="stat-gate-status">--</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrap" style="background-color: #ede9fe; color: #7c3aed;">
+                                <i data-lucide="activity" class="stat-icon"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Gate Events Today</p>
+                                <p class="stat-value" id="stat-gate-events">0</p>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                    <!-- Charts Row -->
+                    <div class="stats-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
                         <div class="card">
                             <h4>Water Level Trend (Live)</h4>
-                            <div style="height: 400px;">
+                            <div style="height: 350px;">
                                 <canvas id="liveWaterLevelChart"></canvas>
                             </div>
                         </div>
                         <div class="card">
-                            <h4>Historical Average</h4>
-                            <div style="height: 400px;">
+                            <h4>Gate Activity Ratio</h4>
+                            <div style="height: 350px; display: flex; align-items: center; justify-content: center;">
+                                <canvas id="gateActivityDoughnut"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historical + Events Row -->
+                    <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <h4>Gate Events History</h4>
+                            <div style="height: 300px;">
                                 <canvas id="historicalWaterLevelChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 0; overflow: hidden;">
+                            <h4 style="padding: 24px 24px 0 24px;">Recent Gate Events</h4>
+                            <div class="table-container" style="border:none; border-radius: 0; box-shadow: none;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Action</th>
+                                            <th>User</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-gate-events-tbody">
+                                        <tr><td colspan="3" class="empty-row">Loading events...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
