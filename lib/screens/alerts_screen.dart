@@ -30,6 +30,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   String _role = 'Homeowner';
   String? _currentUserId;
   bool _isLoadingRole = true;
+  String? _assignedGateId;
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       if (doc.exists && mounted) {
         setState(() {
           _role = doc.data()?['role'] ?? 'Homeowner';
+          _assignedGateId = doc.data()?['assigned_gate_id'];
           _isLoadingRole = false;
         });
       } else if (mounted) {
@@ -248,18 +250,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('announcements');
 
-    if (_role == 'Admin') {
-      // Admins see everything (global alerts + all gate logs)
-      query = query.orderBy('timestamp', descending: true);
-    } else {
-      // Regular users see global alerts + their own gate logs
-      if (_currentUserId != null) {
-        query = query.where('userId', whereIn: ['global', _currentUserId]).orderBy('timestamp', descending: true);
-      } else {
-        // Fallback for non-logged-in (shouldn't happen)
-        query = query.where('userId', isEqualTo: 'global').orderBy('timestamp', descending: true);
-      }
-    }
+    // Filter by gateId
+    query = query.where('gateId', isEqualTo: _assignedGateId).orderBy('timestamp', descending: true);
 
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey(_refreshKey),

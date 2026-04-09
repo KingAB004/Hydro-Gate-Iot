@@ -5,7 +5,9 @@ import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_home_screen.dart';
+import 'screens/lgu_home_screen.dart';
 import 'screens/splash_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:afwms_flutter/widgets/startup_widgets.dart';
 
@@ -110,8 +112,32 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasData) {
-          return const MainHomeScreen();
+        if (snapshot.hasData && snapshot.data != null) {
+          final user = snapshot.data!;
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(),
+            builder: (context, roleSnapshot) {
+              if (roleSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              String role = 'Homeowner';
+              if (roleSnapshot.hasData && roleSnapshot.data != null && roleSnapshot.data!.exists) {
+                final data = roleSnapshot.data!.data() as Map<String, dynamic>?;
+                role = data?['role']?.toString() ?? 'Homeowner';
+              }
+              
+              if (role.trim().toUpperCase() == 'LGU') {
+                return const LGUDashboardScreen();
+              }
+              return const MainHomeScreen();
+            },
+          );
         }
         return const WelcomeScreen();
       },

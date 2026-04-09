@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/alerts_screen.dart';
 
 class AlertsDropdown extends StatelessWidget {
@@ -18,6 +19,9 @@ class AlertsDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
     return Container(
       width: 320,
       constraints: const BoxConstraints(maxHeight: 400),
@@ -76,47 +80,58 @@ class AlertsDropdown extends StatelessWidget {
           ),
           // Alerts List via Stream
           Flexible(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('announcements')
-                  .orderBy('timestamp', descending: true)
-                  .limit(5)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+            child: FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+              builder: (context, userSnapshot) {
+                if (!userSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+                
+                final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                final String? assignedGateId = userData?['assigned_gate_id'];
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                final docs = snapshot.data!.docs;
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.zero,
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final String title = data['title'] ?? 'Announcement';
-                    final String rawType = data['type'] ?? 'info';
-                    final Timestamp? timestamp = data['timestamp'] as Timestamp?;
-                    final DateTime dt = timestamp?.toDate() ?? DateTime.now();
-
-                    AlertPriority priority = AlertPriority.info;
-                    if (rawType.toLowerCase() == 'emergency' || rawType.toLowerCase() == 'danger') {
-                      priority = AlertPriority.high;
-                    } else if (rawType.toLowerCase() == 'alert' || rawType.toLowerCase() == 'warning') {
-                      priority = AlertPriority.medium;
-                    } else if (rawType.toLowerCase() == 'low' || rawType.toLowerCase() == 'success') {
-                      priority = AlertPriority.low;
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('announcements')
+                      .where('gateId', isEqualTo: assignedGateId) // FILTER BY GATE ID
+                      .orderBy('timestamp', descending: true)
+                      .limit(5)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
                     }
 
-                    return _buildAlertItem(context, title, priority, dt);
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    final docs = snapshot.data!.docs;
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        final String title = data['title'] ?? 'Announcement';
+                        final String rawType = data['type'] ?? 'info';
+                        final Timestamp? timestamp = data['timestamp'] as Timestamp?;
+                        final DateTime dt = timestamp?.toDate() ?? DateTime.now();
+
+                        AlertPriority priority = AlertPriority.info;
+                        if (rawType.toLowerCase() == 'emergency' || rawType.toLowerCase() == 'danger') {
+                          priority = AlertPriority.high;
+                        } else if (rawType.toLowerCase() == 'alert' || rawType.toLowerCase() == 'warning') {
+                          priority = AlertPriority.medium;
+                        } else if (rawType.toLowerCase() == 'low' || rawType.toLowerCase() == 'success') {
+                          priority = AlertPriority.low;
+                        }
+
+                        return _buildAlertItem(context, title, priority, dt);
+                      },
+                    );
                   },
                 );
               },

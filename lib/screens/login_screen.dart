@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'registration_screen.dart';
 import 'main_home_screen.dart';
+import 'lgu_home_screen.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/google_logo_base64.dart';
 import '../utils/page_transitions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,18 +35,43 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final credential = await AuthService().signInWithGoogle();
       if (credential != null && mounted) {
+        String role = 'Homeowner';
+        try {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(credential.user!.uid)
+              .get();
+          if (snapshot.exists && snapshot.data() != null) {
+            role = snapshot.data()!['role']?.toString() ?? 'Homeowner';
+          }
+        } catch (e) {
+          debugPrint('Error fetching role: $e');
+        }
+
         try {
           await AuditLogService().logEvent(
             action: 'login',
             severity: 'safe',
-            description: 'Google login',
+            description: 'Google login - Role: $role',
           );
         } catch (e) {
           debugPrint('Audit log write failed: $e');
         }
+
+        Widget nextScreen = role.trim().toUpperCase() == 'LGU' ? const LGUDashboardScreen() : const MainHomeScreen();
+
+        // Temporary Debug SnackBar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('DEBUG: Role fetched is "$role"'),
+            backgroundColor: Colors.blueGrey,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
         Navigator.pushReplacement(
           context,
-          PageTransitions.slideFadeRoute(const MainHomeScreen()),
+          PageTransitions.slideFadeRoute(nextScreen),
         );
       }
     } catch (e) {
@@ -84,23 +111,48 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       if (mounted) {
+        String role = 'Homeowner';
+        try {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
+          if (snapshot.exists && snapshot.data() != null) {
+            role = snapshot.data()!['role']?.toString() ?? 'Homeowner';
+          }
+        } catch (e) {
+          debugPrint('Error fetching role: $e');
+        }
+
         try {
           await AuditLogService().logEvent(
             action: 'login',
             severity: 'safe',
-            description: 'Email/password login',
+            description: 'Email/password login - Role: $role',
           );
         } catch (e) {
           debugPrint('Audit log write failed: $e');
         }
+
+        Widget nextScreen = role.trim().toUpperCase() == 'LGU' ? const LGUDashboardScreen() : const MainHomeScreen();
+
+        // Temporary Debug SnackBar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('DEBUG: Role fetched is "$role"'),
+            backgroundColor: Colors.blueGrey,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
         Navigator.pushReplacement(
           context,
-          PageTransitions.slideFadeRoute(const MainHomeScreen()),
+          PageTransitions.slideFadeRoute(nextScreen),
         );
       }
     } on FirebaseAuthException catch (e) {
