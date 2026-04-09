@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/chatbot_modal.dart';
 import '../widgets/alerts_dropdown.dart';
 import '../services/weather_service.dart';
+import '../utils/formatters.dart';
 import '../services/auth_service.dart';
 import '../utils/weather_utils.dart';
 import '../models/weather_models.dart';
@@ -46,6 +47,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
 
   // Navigation
   int _selectedIndex = 0;
+  final PageController _pageController = PageController();
 
   // Professional Teal Palette
   static const Color brandTeal = Color(0xFF00897B);
@@ -69,6 +71,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
     _floodSubscription?.cancel();
     _announcementTitleController.dispose();
     _announcementDescController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -118,7 +121,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
 
   Future<void> _fetchWeatherData() async {
     try {
-      final forecast = await _weatherService.getCompleteWeather('Philippines');
+      final forecast = await _weatherService.getCompleteWeather('Marikina');
       if (!mounted) return;
       setState(() {
         _weatherForecast = forecast;
@@ -135,13 +138,18 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   // ──────────────────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
-    switch (_selectedIndex) {
-      case 0: return _buildMonitorTab();
-      case 1: return _buildNotificationsTab();
-      case 2: return _buildMessagingTab();
-      case 3: return _buildProfileTab();
-      default: return _buildMonitorTab();
-    }
+    return PageView(
+      controller: _pageController,
+      onPageChanged: (index) {
+        setState(() => _selectedIndex = index);
+      },
+      children: [
+        _buildMonitorTab(),
+        _buildNotificationsTab(),
+        _buildMessagingTab(),
+        _buildProfileTab(),
+      ],
+    );
   }
 
   // ── TAB 1: MONITOR ────────────────────────────────────────────────────────
@@ -161,9 +169,25 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           const SizedBox(height: 24),
           _buildHeroWaterCard(waterLevelM, isCritical, isWarning, isNormal),
           const SizedBox(height: 24),
+          // Quick Stats
+          const Text('SYSTEM OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
+          const SizedBox(height: 12),
+          _buildQuickStatsRow(),
+          const SizedBox(height: 24),
+          // Threshold Legend
+          const Text('THRESHOLD LEVELS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
+          const SizedBox(height: 12),
+          _buildThresholdLegend(),
+          const SizedBox(height: 24),
+          // Weather
           const Text('SYSTEM WEATHER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
-          const SizedBox(height: 16),
-          _buildWeatherSummaryStrip(isCritical),
+          const SizedBox(height: 12),
+          _buildWeatherSummaryStrip(),
+          const SizedBox(height: 24),
+          // Recent Activity
+          const Text('RECENT ACTIVITY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
+          const SizedBox(height: 12),
+          _buildRecentActivitySection(),
         ],
       ),
     );
@@ -304,10 +328,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
               ],
             ),
           ),
-          if (_assignedGateId != null) ...[
-            const SizedBox(height: 24),
-            Text('SCOPED TO GATE: $_assignedGateId', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: textSecondary)),
-          ],
+
         ],
       ),
     );
@@ -440,41 +461,10 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           Text(_email, style: const TextStyle(fontSize: 14, color: textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 32),
           _buildProfileItem('Role', _role, Icons.security_rounded),
-          _buildProfileItem('Station ID', _assignedGateId ?? 'None Assigned', Icons.sensors_rounded),
+          _buildProfileItem('Station ID', _assignedGateId != null ? formatGateId(_assignedGateId!) : 'None Assigned', Icons.sensors_rounded),
           _buildProfileItem('Account Status', 'Active', Icons.verified_user_rounded, valueColor: successGreen),
-          const SizedBox(height: 32),
 
-          // Database Maintenance Section
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('DATABASE MAINTENANCE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textSecondary, letterSpacing: 1.0)),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black.withOpacity(0.04))),
-            child: Column(
-              children: [
-                const Text('Remove redundant keys (sensor_warning, water_level) to optimize storage.', style: TextStyle(fontSize: 12, color: textSecondary)),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _cleanupDatabase,
-                    icon: const Icon(Icons.cleaning_services_rounded, size: 18),
-                    label: const Text('Sync & Cleanup Keys', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: brandTeal,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
+
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -559,8 +549,9 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           _buildModernGauge(progress, statusColor),
           const SizedBox(height: 20),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            _buildSmallInfo('Last Sync', lastUpdated),
-            _buildSmallInfo('Assigned ID', _assignedGateId ?? 'N/A'),
+            Expanded(child: _buildSmallInfo('Last Sync', lastUpdated)),
+            Expanded(child: _buildSmallInfo('Assigned ID', formatGateId(_assignedGateId ?? 'N/A'))),
+            Expanded(child: _buildSmallInfo('Timezone', 'Asia/Manila (PHT)')),
           ]),
         ],
       ),
@@ -576,14 +567,223 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   }
 
   Widget _buildSmallInfo(String label, String value) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 9, color: textSecondary, fontWeight: FontWeight.bold)), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: textPrimary))]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 9, color: textSecondary, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(
+          value, 
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: textPrimary),
+          softWrap: true,
+        )
+      ],
+    );
   }
 
-  Widget _buildWeatherSummaryStrip(bool isCritical) {
-    if (_isLoadingWeather) return const Center(child: CircularProgressIndicator());
+  Widget _buildWeatherSummaryStrip() {
+    if (_isLoadingWeather) return const Center(child: CircularProgressIndicator(color: brandTeal));
     final w = _weatherForecast?.currentWeather;
     if (w == null) return const SizedBox.shrink();
-    return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: LinearGradient(colors: isCritical ? [dangerRed, const Color(0xFF991B1B)] : [brandTeal, brandTealDark]), borderRadius: BorderRadius.circular(24)), child: Row(children: [Icon(WeatherUtils.getWeatherIcon(w.icon, w.main), color: Colors.white, size: 28), const SizedBox(width: 16), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${w.temperature.toStringAsFixed(0)}°C', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), Text(WeatherUtils.capitalizeDescription(w.description), style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11))]), const Spacer(), Text('${w.humidity}% Humid', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))]));
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [brandTeal, brandTealDark]),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(children: [
+        Icon(WeatherUtils.getWeatherIcon(w.icon, w.main), color: Colors.white, size: 28),
+        const SizedBox(width: 16),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${w.temperature.toStringAsFixed(0)}°C', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+          Text(WeatherUtils.capitalizeDescription(w.description), style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+        ]),
+        const Spacer(),
+        Text('${w.humidity}% Humid', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Widget _buildQuickStatsRow() {
+    return Row(
+      children: [
+        Expanded(child: _buildStatCard(
+          icon: Icons.security_rounded,
+          label: 'Gate Status',
+          value: isGateOpen ? 'OPEN' : 'CLOSED',
+          color: isGateOpen ? successGreen : dangerRed,
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _buildStatCard(
+          icon: Icons.water_rounded,
+          label: 'Water Level',
+          value: '${waterLevelM.toStringAsFixed(1)}m',
+          color: waterLevelM >= 18.0 ? dangerRed : (waterLevelM >= 15.0 ? warningOrange : successGreen),
+        )),
+        const SizedBox(width: 12),
+        Expanded(child: _buildStatCard(
+          icon: Icons.speed_rounded,
+          label: 'Status',
+          value: waterLevelM >= 18.0 ? 'CRITICAL' : (waterLevelM >= 15.0 ? 'WARNING' : 'NORMAL'),
+          color: waterLevelM >= 18.0 ? dangerRed : (waterLevelM >= 15.0 ? warningOrange : successGreen),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildStatCard({required IconData icon, required String label, required String value, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThresholdLegend() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        children: [
+          _buildLegendRow(successGreen, 'Safe', '0 – 14.9m', waterLevelM < 15.0),
+          const SizedBox(height: 12),
+          _buildLegendRow(warningOrange, 'Caution', '15.0 – 17.9m', waterLevelM >= 15.0 && waterLevelM < 18.0),
+          const SizedBox(height: 12),
+          _buildLegendRow(dangerRed, 'Critical', '18.0m+', waterLevelM >= 18.0),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendRow(Color color, String title, String range, bool isActive) {
+    return Row(
+      children: [
+        Container(
+          width: 14, height: 14,
+          decoration: BoxDecoration(
+            color: isActive ? color : color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(4),
+            border: isActive ? Border.all(color: color, width: 2) : null,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(title, style: TextStyle(fontSize: 14, fontWeight: isActive ? FontWeight.w800 : FontWeight.w500, color: isActive ? textPrimary : textSecondary)),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? color.withOpacity(0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(range, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isActive ? color : textSecondary)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivitySection() {
+    return StreamBuilder<DatabaseEvent>(
+      stream: FirebaseDatabase.instance.ref('audit_logs').orderByChild('timestamp').limitToLast(5).onValue,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: brandTeal)));
+        }
+        if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+          return _buildEmptyActivityCard();
+        }
+
+        final Map<dynamic, dynamic> logs = snapshot.data!.snapshot.value as Map;
+        final List<MapEntry<dynamic, dynamic>> sortedLogs = logs.entries.toList()
+          ..sort((a, b) => (b.value['timestamp'] ?? 0).compareTo(a.value['timestamp'] ?? 0));
+
+        final gateLogs = sortedLogs.where((entry) {
+          final action = entry.value['action']?.toString().toLowerCase() ?? '';
+          return action.contains('gate') || action.contains('flood');
+        }).take(4).toList();
+
+        if (gateLogs.isEmpty) return _buildEmptyActivityCard();
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 6))],
+          ),
+          child: Column(
+            children: gateLogs.map((entry) {
+              final log = entry.value as Map;
+              final String desc = formatGateId(log['description'] ?? '');
+              final int ts = log['timestamp'] ?? 0;
+              final dt = DateTime.fromMillisecondsSinceEpoch(ts);
+              final String action = log['action']?.toString() ?? '';
+              final bool isClose = desc.toLowerCase().contains('closed');
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isClose ? dangerRed : successGreen).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(isClose ? Icons.lock_rounded : Icons.lock_open_rounded, color: isClose ? dangerRed : successGreen, size: 14),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(desc, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Text('${dt.hour}:${dt.minute.toString().padLeft(2, '0')} • ${dt.month}/${dt.day}', style: const TextStyle(fontSize: 10, color: textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyActivityCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 6))],
+      ),
+      child: const Center(
+        child: Text('No recent gate activity', style: TextStyle(color: textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+      ),
+    );
   }
 
   Widget _buildEmptyState(String msg, IconData icon) {
@@ -615,24 +815,19 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
       backgroundColor: bgLight,
       body: SafeArea(child: _buildBody()),
       bottomNavigationBar: _buildFloatingNavBar(),
-      floatingActionButton: _selectedIndex == 0 ? _buildChatbotFAB() : null,
-    );
-  }
-
-  Widget _buildChatbotFAB() {
-    return FloatingActionButton(
-      onPressed: () {
-        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => const ChatbotModal());
-      },
-      backgroundColor: brandTeal,
-      child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
     );
   }
 
   Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
     final bool isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      },
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [AnimatedContainer(duration: const Duration(milliseconds: 300), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: isSelected ? brandTeal : Colors.transparent, shape: BoxShape.circle), child: Icon(isSelected ? activeIcon : icon, color: isSelected ? Colors.white : textSecondary, size: 22)), const SizedBox(height: 4), Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500, color: isSelected ? brandTeal : textSecondary))]),
     );
