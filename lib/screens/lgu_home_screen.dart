@@ -502,6 +502,13 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
             child: OutlinedButton.icon(
               onPressed: () async {
                 await AuthService().signOut();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                    (route) => false,
+                  );
+                }
               },
               icon: const Icon(Icons.logout_rounded, color: dangerRed),
               label: const Text('Logout', style: TextStyle(color: dangerRed, fontWeight: FontWeight.w800)),
