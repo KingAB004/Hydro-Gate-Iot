@@ -1,187 +1,308 @@
-# AFWMS (Flutter Project) Setup Guide
+# HydroGate AFWMS — Setup Guide 🌊
 
-This is the step-by-step guide to set up and run the project smoothly after cloning. Follow the steps below so we don't miss any dependencies.
+Complete step-by-step guide for teammates to clone and run this project on their machine. Follow **every step in order** — don't skip anything.
 
-## 📝 Prerequisites
-Before we start, make sure you have the following installed on your machine:
-- **Git** (for cloning, and it must be available in your system `PATH`)
-- **Flutter SDK** (v3.10.4 or higher) - [Download here](https://docs.flutter.dev/get-started/install)
-- **Dart SDK** (Included when you install Flutter)
-- **Code Editor** (VS Code, Android Studio, or IntelliJ)
-- **Firebase Account** (for backend/auth features)
-- **OpenWeatherMap Account** (for weather functionality) - [Sign up here](https://openweathermap.org/api)
+---
+
+## 📝 Prerequisites (Install BEFORE Starting)
+
+Make sure you have ALL of these installed first:
+
+| Tool | Version | Download Link |
+|------|---------|---------------|
+| **Git** | Any recent version | [git-scm.com/download/win](https://git-scm.com/download/win) |
+| **Flutter SDK** | v3.10.4 or higher | [flutter.dev/get-started/install](https://docs.flutter.dev/get-started/install) |
+| **Android Studio** | Latest (for Android emulator + SDK) | [developer.android.com/studio](https://developer.android.com/studio) |
+| **VS Code** | Latest (recommended editor) | [code.visualstudio.com](https://code.visualstudio.com) |
+| **Node.js + npm** | LTS version (needed for Firebase CLI) | [nodejs.org](https://nodejs.org) |
+| **Chrome** | Latest (for web testing) | Already installed probably 😄 |
+
+### ✅ Quick Verification
+After installing, open a **new** terminal (PowerShell or CMD) and verify everything:
+```bash
+git --version
+flutter --version
+node --version
+npm --version
+```
+All four should print version numbers. If any fails, the tool is not in your `PATH` — reinstall it.
+
+### ⚠️ Windows Developer Mode (REQUIRED)
+Flutter plugins need symlink support. Enable Developer Mode:
+```bash
+start ms-settings:developers
+```
+Then toggle **Developer Mode** to ON.
+
+### ⚠️ Flutter Doctor
+Run this to check if your Flutter setup is complete:
+```bash
+flutter doctor
+```
+Fix any ❌ items before proceeding. Common fixes:
+- **Android toolchain**: Open Android Studio → Settings → SDK Manager → install SDK + command-line tools
+- **Accept Android licenses**: `flutter doctor --android-licenses`
 
 ---
 
 ## 🚀 Setup Instructions
 
-### 1. Clone the Repository
-First, clone the repo to your local machine:
+### Step 1: Clone the Repository
 ```bash
-git clone <insert-repo-url-here>
+git clone <insert-your-repo-url-here>
 cd AFWMS
 ```
 
-### 2. Install Dependencies
-We need to download the packages used in the project (like firebase, cupertino icons, etc.):
+### Step 2: Install Flutter Dependencies
+This downloads all the packages listed in `pubspec.yaml`:
 ```bash
 flutter pub get
 ```
+> **If this fails**, make sure `flutter` is in your PATH and you are inside the `AFWMS/` folder.
 
-### 3. Firebase Setup (Important!)
-Since we use Firebase authentication and Firestore, we need to connect the app to the Firebase project. The Firebase configuration files are not included in the GitHub repo (they are in `.gitignore`), so each teammate needs to generate them locally.
+### Step 3: Firebase CLI Setup
+We use Firebase Authentication, Firestore, and Realtime Database. The config files are NOT in GitHub (they are gitignored), so you need to generate them locally.
 
-**a. Install FlutterFire CLI**
-If you don't have FlutterFire CLI installed globally yet, run:
-```bash
-dart pub global activate flutterfire_cli
-```
-*(Note: On Windows, add `C:\Users\<your-username>\AppData\Local\Pub\Cache\bin` to your `PATH` environment variable if `flutterfire` is not recognized after installation.)*
-
-**b. Install Firebase CLI**
-The `firebase login` command requires the Firebase CLI. Install it first:
-
-Option 1: With Node.js and npm installed
+**a. Install Firebase CLI via npm:**
 ```bash
 npm install -g firebase-tools
 ```
 
-Option 2: Download the standalone Firebase CLI from the official docs
-- [Firebase CLI setup guide](https://firebase.google.com/docs/cli)
+**b. Verify it works:**
+```bash
+firebase --version
+```
+> **If `firebase` is not recognized**, close and reopen your terminal, then try again.
 
-**c. Login to Firebase**
-Before configuring, you must be logged into your Firebase account:
+**c. Login to Firebase:**
 ```bash
 firebase login
 ```
+This opens a browser window. Log in with the **same Google account** that has access to the Firebase project. Ask your team lead to add you if needed.
 
-**d. Configure Firebase**
-To generate the missing `firebase_options.dart` file (where errors often occur when missing):
+### Step 4: FlutterFire CLI Setup
+FlutterFire generates the `firebase_options.dart` config file that the app needs.
+
+**a. Install FlutterFire CLI:**
+```bash
+dart pub global activate flutterfire_cli
+```
+
+**b. Add Pub Cache to your PATH (Windows):**
+The CLI is installed to a folder that may not be in your PATH. Add this folder:
+```
+C:\Users\<your-username>\AppData\Local\Pub\Cache\bin
+```
+**How to add to PATH:**
+1. Press `Win + S`, search for **"Environment Variables"**
+2. Click **"Edit the system environment variables"**
+3. Click **"Environment Variables..."** button
+4. Under **User variables**, find `Path`, click **Edit**
+5. Click **New**, paste: `C:\Users\<your-username>\AppData\Local\Pub\Cache\bin`
+6. Click OK on all windows
+7. **Close and reopen** your terminal / VS Code
+
+**c. Verify it works:**
+```bash
+flutterfire --version
+```
+
+### Step 5: Generate Firebase Config Files
+This is the most important step. It generates `lib/firebase_options.dart` and `android/app/google-services.json`:
 ```bash
 flutterfire configure --project=afwms-d3141
 ```
-This will connect to Firebase using the specific project id used in the app. After this, the `lib/firebase_options.dart` file will be generated automatically.
 
-### 4. Environment Variables Setup (API Keys)
-The app uses environment variables to securely store API keys. This prevents sensitive information from being pushed to GitHub.
+When prompted:
+- **Select platforms**: Use arrow keys + spacebar to select **Android, Web, and Windows** (or whichever you need)
+- Press Enter to confirm
 
-**a. Copy the environment template**
-Copy the `.env.example` file to create your own `.env` file:
+> **IMPORTANT**: After running this, open `lib/firebase_options.dart` and check if `databaseURL` is present. If it's missing, you need to manually add this line to the Web, Android, and Windows configurations inside that file:
+> ```dart
+> databaseURL: 'https://afwms-d3141-default-rtdb.firebaseio.com',
+> ```
+
+### Step 6: Environment Variables (API Keys)
+The app uses a `.env` file for API keys. This file is gitignored so your keys stay private.
+
+**a. Create your `.env` file from the template:**
+
+PowerShell:
+```powershell
+Copy-Item .env.example .env
+```
+
+CMD:
+```cmd
+copy .env.example .env
+```
+
+Git Bash / macOS / Linux:
 ```bash
 cp .env.example .env
 ```
-*(On Windows Command Prompt, use: `copy .env.example .env`)*
 
-**b. Get OpenWeatherMap API Key**
-1. Go to [OpenWeatherMap](https://openweathermap.org/api)
-2. Create a free account
-3. Verify your email address (check your inbox!)
-4. Go to [API Keys](https://home.openweathermap.org/api_keys)
-5. Generate a new API key
-6. Wait 10-120 minutes for activation (this is normal)
+**b. Get your OpenWeatherMap API Key:**
+1. Go to [openweathermap.org](https://openweathermap.org/api) and create a **free** account
+2. Verify your email (check inbox + spam)
+3. Go to [API Keys page](https://home.openweathermap.org/api_keys)
+4. Copy your Default key (or generate a new one)
+5. ⏳ **Wait 10 minutes to 2 hours** for the key to activate (this is normal!)
 
-**c. Configure your `.env` file**
-Open your `.env` file and replace `your_api_key_here` with your actual API key:
+**c. Get your Gemini AI API Key:**
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key
+
+**d. Fill in your `.env` file:**
+Open the `.env` file and replace the placeholder values:
 ```dotenv
-OPENWEATHER_API_KEY=your_actual_api_key_here
+OPENWEATHER_API_KEY=paste_your_openweather_key_here
+OPENWEATHER_BASE_URL=https://api.openweathermap.org/data/2.5
+GEMINI_API_KEY=paste_your_gemini_key_here
 ```
 
-**d. Test your API key**
-You can test if your API key works by visiting this URL in your browser:
+**e. Test your OpenWeatherMap key:**
+Open this URL in your browser (replace `YOUR_KEY`):
 ```
-https://api.openweathermap.org/data/2.5/weather?q=Manila&appid=YOUR_API_KEY&units=metric
+https://api.openweathermap.org/data/2.5/weather?q=Manila&appid=YOUR_KEY&units=metric
 ```
-*(Replace `YOUR_API_KEY` with your actual key)*
+If you see JSON weather data, your key is working ✅
 
-### 5. Run the App
-Once the dependencies and Firebase configuration are okay, we can test the app!
-
-If you want to see the list of available devices:
+### Step 7: Run the App! 🎉
+Check available devices:
 ```bash
 flutter devices
 ```
 
-To run the app:
-- **Chrome (Web):** `flutter run -d chrome`
-- **Windows (Desktop):** `flutter run -d windows`
+Run on your preferred platform:
+```bash
+# Chrome (Web)
+flutter run -d chrome
+
+# Android Emulator (make sure emulator is running first)
+flutter run -d emulator-5554
+
+# Windows Desktop
+flutter run -d windows
+
+# Or just let Flutter pick a device
+flutter run
+```
 
 ---
 
-## 🛠 Troubleshooting Common Errors
+## 📱 Building the APK (Android)
 
-### Firebase Errors
-**"Undefined name 'DefaultFirebaseOptions'" or "Error when reading 'lib/firebase_options.dart'"**
-- This means your Firebase configuration hasn't been generated locally yet. Just go back to **Step 3.c** (`flutterfire configure --project=afwms-d3141`) and make sure you are in the root directory of the project (`AFWMS/`).
+To generate a debug APK for testing on a physical phone:
+```bash
+flutter build apk --debug
+```
+The APK will be in: `build/app/outputs/flutter-apk/app-debug.apk`
 
-**Firebase Realtime Database not saving or reading data**
-- Sometimes `flutterfire configure` forgets to add the Realtime Database URL. Open your generated `lib/firebase_options.dart` and make sure `databaseURL: 'https://afwms-d3141-default-rtdb.firebaseio.com'` is added to your Web, Android, and Windows configurations.
-- The repo is locked to the Firebase project `afwms-d3141`. Do not mix it with a different project in Firebase Console when checking Firestore or Realtime Database data.
-
-### Weather API Errors
-**"Invalid API key" error in Weather screen**
-- Check if you copied your API key correctly in the `.env` file
-- Make sure your email is verified with OpenWeatherMap
-- Wait 1-2 hours for the API key to activate (this is normal for new accounts)
-- Test your key using the URL provided in Step 4.d
-
-**Weather screen shows error or won't load**
-- Make sure your `.env` file exists and has the correct API key
-- Check that your OpenWeatherMap API key is valid and activated
-- Verify your internet connection
-
-### System Errors
-**"Building with plugins requires symlink support" (Windows)**
-- You need to enable **Developer Mode** in your Windows Settings. You can type in the terminal:
-  ```bash
-  start ms-settings:developers
-  ```
-  Then turn on Developer Mode.
-
-**"git : The term 'git' is not recognized..." when running Flutter or Dart commands**
-- Install **Git for Windows** from [git-scm.com](https://git-scm.com/download/win)
-- During installation, keep the option that adds Git to your command line tools / `PATH`
-- After installation, fully close and reopen your terminal or VS Code
-- Verify it works with:
-  ```bash
-  git --version
-  ```
-- Then retry the original command, for example:
-  ```bash
-  dart pub global activate flutterfire_cli
-  ```
-
-**"flutterfire : The term 'flutterfire' is not recognized..."**
-- Add `C:\Users\<your-username>\AppData\Local\Pub\Cache\bin` to your `PATH`
-- Fully close and reopen your terminal or VS Code
-- Verify it works with:
-  ```bash
-  flutterfire --version
-  ```
-
-**"firebase : The term 'firebase' is not recognized..."**
-- Install the Firebase CLI by following Step 3.b
-- If you installed it with npm, make sure Node.js and npm are installed and available in your `PATH`
-- Fully close and reopen your terminal or VS Code
-- Verify it works with:
-  ```bash
-  firebase --version
-  ```
-
-### Package Version Errors
-**"1 package has newer versions incompatible with dependency constraints"**
-- This is sometimes normal when there are version mismatches. If you want to update to the latest compatible versions, run:
-  ```bash
-  flutter pub upgrade
-  ```
+For release APK (needs signing key — ask the team lead):
+```bash
+flutter build apk --release
+```
 
 ---
 
-## 📁 Project Structure Notes
+## 🛠 Troubleshooting
 
-- **`.env`** - Your local environment variables (never commit this!)
-- **`.env.example`** - Template for environment variables (safe to commit)  
-- **`lib/firebase_options.dart`** - Auto-generated Firebase config (in .gitignore)
-- **Weather integration** - Uses OpenWeatherMap API for real-time weather data
+### ❌ "Undefined name 'DefaultFirebaseOptions'" or firebase_options.dart error
+**Cause**: Firebase config file hasn't been generated yet.
+**Fix**: Run `flutterfire configure --project=afwms-d3141` (Step 5).
+
+### ❌ Firebase Realtime Database not working (reads/writes fail)
+**Cause**: `databaseURL` missing from `firebase_options.dart`.
+**Fix**: Open `lib/firebase_options.dart` and add this line to each platform config:
+```dart
+databaseURL: 'https://afwms-d3141-default-rtdb.firebaseio.com',
+```
+
+### ❌ "Building with plugins requires symlink support" (Windows)
+**Cause**: Developer Mode is not enabled.
+**Fix**: Run `start ms-settings:developers` and turn on Developer Mode.
+
+### ❌ `git` / `flutter` / `firebase` / `flutterfire` not recognized
+**Cause**: The tool is not in your system PATH.
+**Fix**: 
+- `git` → Reinstall Git and make sure "Add to PATH" is checked
+- `flutter` → Add `<flutter-sdk-path>/bin` to your PATH
+- `firebase` → Run `npm install -g firebase-tools` and restart terminal
+- `flutterfire` → Add `C:\Users\<you>\AppData\Local\Pub\Cache\bin` to PATH and restart terminal
+
+### ❌ "Invalid API key" on Weather screen
+**Cause**: OpenWeatherMap key is wrong, not activated yet, or `.env` file is missing.
+**Fix**:
+1. Make sure `.env` file exists in the project root
+2. Double-check your API key is copied correctly (no extra spaces)
+3. If new account, wait 1-2 hours for activation
+4. Test using the URL in Step 6e
+
+### ❌ Gemini chatbot not responding
+**Cause**: `GEMINI_API_KEY` is missing or invalid in `.env`.
+**Fix**: Get a new key from [Google AI Studio](https://aistudio.google.com/app/apikey) and update your `.env`.
+
+### ❌ `flutter pub get` fails with version errors
+**Fix**: Try upgrading:
+```bash
+flutter pub upgrade
+```
+If it still fails, check you're on Flutter 3.10.4+:
+```bash
+flutter --version
+```
+
+### ❌ Android build fails / Gradle errors
+**Fix**: Make sure you have:
+1. Android SDK installed (via Android Studio → SDK Manager)
+2. Java 17+ (bundled with Android Studio)
+3. Accepted licenses: `flutter doctor --android-licenses`
+4. Try cleaning: `flutter clean && flutter pub get`
 
 ---
-Happy coding! 💻 🌤️
+
+## 📁 Project Structure (Key Files)
+
+```
+AFWMS/
+├── lib/
+│   ├── main.dart                 # App entry point & auth routing
+│   ├── firebase_options.dart     # (GENERATED - gitignored) Firebase config
+│   ├── screens/                  # All app screens
+│   │   ├── dashboard_screen.dart # Operator dashboard (water level + gate control)
+│   │   ├── lgu_home_screen.dart  # LGU/Admin dashboard
+│   │   ├── alerts_screen.dart    # Announcements & notifications
+│   │   ├── weather_screen.dart   # Weather forecast
+│   │   └── ...
+│   ├── services/                 # Backend services (auth, audit logs, weather)
+│   ├── widgets/                  # Reusable UI components
+│   ├── models/                   # Data models
+│   └── utils/                    # Utility functions
+├── android/                      # Android-specific config
+│   └── app/google-services.json  # (GENERATED - gitignored) Firebase Android config
+├── web/                          # Web-specific config
+├── assets/                       # Images & logos
+├── .env                          # (YOUR COPY - gitignored) API keys
+├── .env.example                  # Template for .env
+├── pubspec.yaml                  # Project dependencies
+└── instructions.md               # This file!
+```
+
+---
+
+## 🔑 Roles in the App
+
+| Role | Dashboard | Features |
+|------|-----------|----------|
+| **Admin / LGU** | `LGUDashboardScreen` | Monitor water level, broadcast announcements, view audit logs, close/open gates |
+| **Homeowner / Operator** | `MainHomeScreen` → `DashboardScreen` | View water level, control assigned gate, view alerts, weather |
+
+---
+
+## 💬 Need Help?
+If you're stuck, send a screenshot of your error in the group chat. Most issues are PATH or Firebase config related — usually fixable in < 5 minutes.
+
+
