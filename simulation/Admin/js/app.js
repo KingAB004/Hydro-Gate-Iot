@@ -175,6 +175,7 @@ function setupConfirmActionModal() {
 function initApp() {
     // Setup tab navigation first so sidebar works even if other modules fail.
     setupTabNavigation();
+    initSessionTimeout();
 
     // Global reusable modal utilities
     setupConfirmDeleteModal();
@@ -440,3 +441,89 @@ function getTimeAgo(date) {
 
 // Export functions for global access
 window.updateStats = updateStats;
+
+// ===== Session Timeout Logic =====
+let idleTimer;
+let warningTimer;
+const IDLE_TIME_LIMIT = 4.5 * 60 * 1000; // 4 minutes 30 seconds
+const WARNING_TIME_LIMIT = 30 * 1000;    // 30 seconds
+
+function initSessionTimeout() {
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(name => {
+        document.addEventListener(name, resetIdleTimer, true);
+    });
+    startIdleTimer();
+}
+
+function startIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(showTimeoutWarning, IDLE_TIME_LIMIT);
+}
+
+function resetIdleTimer() {
+    // Only reset if we are not in the warning phase
+    if (!document.getElementById('session-timeout-overlay')) {
+        startIdleTimer();
+    }
+}
+
+function showTimeoutWarning() {
+    if (document.getElementById('session-timeout-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'session-timeout-overlay';
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10000; color: white; font-family: 'Poppins', sans-serif;
+    `;
+
+    let seconds = 30;
+    overlay.innerHTML = `
+        <div style="text-align: center; max-width: 400px; padding: 40px; background: #1a1a1a; border-radius: 24px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="font-size: 50px; margin-bottom: 20px;">⌛</div>
+            <h2 style="margin-bottom: 10px; font-weight: 600;">Session Expiring</h2>
+            <p style="color: #aaa; margin-bottom: 30px;">You have been inactive. For your security, you will be logged out in:</p>
+            <div id="timeout-countdown" style="font-size: 48px; font-weight: 700; color: #007EAA; margin-bottom: 40px;">30s</div>
+            <div style="display: flex; gap: 12px;">
+                <button id="timeout-stay-btn" style="flex: 1; padding: 14px; border-radius: 12px; border: none; background: #007EAA; color: white; font-weight: 600; cursor: pointer;">Stay Logged In</button>
+                <button id="timeout-logout-btn" style="flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #333; background: transparent; color: #777; font-weight: 600; cursor: pointer;">Logout</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const countdownEl = document.getElementById('timeout-countdown');
+    const interval = setInterval(() => {
+        seconds--;
+        if (countdownEl) countdownEl.textContent = seconds + 's';
+        if (seconds <= 0) {
+            clearInterval(interval);
+            adminLogoutManual();
+        }
+    }, 1000);
+
+    document.getElementById('timeout-stay-btn').onclick = () => {
+        clearInterval(interval);
+        document.body.removeChild(overlay);
+        startIdleTimer();
+    };
+
+    document.getElementById('timeout-logout-btn').onclick = () => {
+        clearInterval(interval);
+        adminLogoutManual();
+    };
+}
+
+async function adminLogoutManual() {
+    try {
+        if (window.auth) await window.auth.signOut();
+    } catch (e) {
+        console.error('Logout failed:', e);
+    } finally {
+        window.location.replace('login.html');
+    }
+}

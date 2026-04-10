@@ -10,6 +10,7 @@ import 'screens/splash_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:afwms_flutter/widgets/startup_widgets.dart';
+import 'widgets/session_timeout_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ void main() {
 
 class RootApp extends StatefulWidget {
   const RootApp({super.key});
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   State<RootApp> createState() => _RootAppState();
@@ -94,12 +96,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: RootApp.navigatorKey,
       title: 'AFWMS',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007EAA)),
         useMaterial3: true,
       ),
+      builder: (context, child) => SessionTimeoutManager(child: child!),
       home: const SplashScreen(),
     );
   }
