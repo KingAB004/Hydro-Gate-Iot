@@ -5,8 +5,7 @@ service cloud.firestore {
     // Announcements - All users can read, only authenticated can write
     match /announcements/{announcementId} {
       allow read: if true;
-      // Temporary for simulation/admin dashboard without enforced login session.
-      allow write: if true;
+      allow write: if request.auth != null;
     }
     
     // Notifications - Only authenticated users
@@ -23,11 +22,16 @@ service cloud.firestore {
     
     // User data
     match /users/{userId} {
-      // Temporary for simulation/admin dashboard without enforced login session.
-      allow read, write: if true;
+      allow read, write: if true; // Temporary for simulation
+    }
+
+    // Devices (Station monitoring)
+    match /devices/{deviceId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
     
-    // Water level data (for monitoring)
+    // Water level data
     match /water_levels/{levelId} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -39,11 +43,16 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // Smart alerts (simulation dashboard)
+    // Smart alerts
     match /alerts/{alertId} {
       allow read: if true;
-      // Temporary for simulation/admin dashboard without enforced login session.
-      allow write: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Audit logs (Firestore copy/backup)
+    match /audit_logs/{logId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
   }
 }

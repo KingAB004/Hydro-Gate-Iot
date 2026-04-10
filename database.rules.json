@@ -1,0 +1,15 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "audit_logs": {
+      ".indexOn": ["timestamp"],
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "flood_monitoring": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}
