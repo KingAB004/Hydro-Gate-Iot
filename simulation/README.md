@@ -2,32 +2,32 @@
 
 ## Overview
 
-This folder contains HTML/CSS/JavaScript dashboards for the Advanced Flood Warning & Water Management System (AFWMS). The project includes comprehensive admin and LGU (Local Government Unit) dashboards for managing water resources, user accounts, and emergency communications.
+This folder contains the Admin Dashboard for the Advanced Flood Warning & Water Management System (AFWMS).
 
 ## 📁 Folder Structure
 
 ```
 simulation/
-├── dashboard-hub.html          # Main entry point with dashboard selection
 ├── Admin/
 │   ├── dashboard.html          # Admin dashboard main page
+│   ├── login.html              # Admin login page (Main Entry Point)
 │   ├── css/
-│   │   └── styles.css          # Global styling for all dashboards
+│   │   └── styles.css          # Global styling
 │   └── js/
-│       ├── app.js              # Main app logic and tab navigation
-│       ├── users.js            # User management functionality
+│       ├── app.js              # Main app logic
+│       ├── users.js            # User management
 │       ├── hydrograte.js       # Water level monitoring
-│       └── announcements.js   # Announcement management
-└── lgu/
-    └── dashboard.html          # LGU dashboard main page
+│       ├── announcements.js    # Announcements
+│       ├── admin_login.js      # Login logic
+│       └── firebase-config.js  # Firebase config
+└── README.md                   # This documentation
 ```
 
 ## 🚀 Getting Started
 
-1. **Open the Dashboard Hub**: Open `dashboard-hub.html` in a web browser
-2. **Select Your Role**:
-   - Click "Admin Dashboard" for full system management
-   - Click "LGU Dashboard" for municipal-level management
+1. **Access the Portal**: Open `Admin/login.html` in a web browser.
+2. **Login**: Use an authorized Admin account to access the dashboard.
+   - **Default Admin Account**: admin@hydrogate.com / password
 
 ## 📊 Features
 
@@ -40,55 +40,18 @@ simulation/
 - **Account Status**: Activate/Deactivate user accounts
 - **User List**: View all users with joining date and email
 
-#### 2. **Hydrograte Status & Model** 💧
+#### 2. **Hydrograte Status & Monitoring** 💧
 - **Multiple Device Management**: Add, edit, and delete hydrograte devices
-- **Device List View**: Overview cards showing all registered devices
 - **Real-Time Monitoring**: Current water level with percentage gauge
-- **Device Status**: Online/Offline status and response time
-- **Model Information**: Device specifications, firmware version, location
-- **Maintenance Schedule**: Calibration history and next due date
-- **Device Control**: 
-  - Calibrate device
-  - Restart device
-  - View error logs
-  - Add new devices with detailed specifications
+- **Live Statistics**: Dynamic charts and summary cards
+- **Device Control**: Calibrate, Restart, or Toggle Floodgate
 - **Error Logs**: Track system warnings and errors with timestamps
-- **Device Details**: Name, location, serial number, installation date, max water level, sensors
 
-#### 3. **Announcements & Messages** 📢
+#### 3. **Announcements & Communications** 📢
 - **Create Announcements**: Send system-wide messages
-- **Message Types**: 
-  - Information
-  - Alert
-  - Warning
-  - Emergency
 - **Target Audience**: Select recipient roles (Admin, LGU, Homeowners)
 - **Scheduling**: Schedule announcements for later
-- **Message History**: View all sent messages with status
-
-### LGU Dashboard Features
-
-#### 1. **Water Level Monitoring** 💧
-- **Current Status**: Real-time water level gauge with safe thresholds
-- **Level Assessment**: Status (Safe, Warning, Critical)
-- **Trend Analysis**: Stable/Rising/Falling trends
-- **Device Information**: Last update time and response status
-- **Recommended Actions**: Context-aware safety recommendations
-- **24-Hour History**: Water level trends and patterns
-
-#### 2. **Resident Management** 👥
-- **View Residents**: List of registered homeowners
-- **Search Functionality**: Find residents by name
-- **Area Filtering**: Filter by district/area
-- **Status Tracking**: Active/Inactive status
-- **Contact Information**: Email and registration date
-
-#### 3. **Messages & Announcements** 📢
-- **Send Messages**: Broadcast messages to residents
-- **Message Types**: Advisory, Warning, Emergency
-- **Priority Levels**: Normal, High, Urgent
-- **Message History**: View sent messages
-- **Delivery Status**: Track delivery status
+- **Audit Logs**: Track all critical system actions for security
 
 ## 💻 Technical Stackets on refresh)
 - **Styling**: CSS Grid, Flexbox, CSS Variables
