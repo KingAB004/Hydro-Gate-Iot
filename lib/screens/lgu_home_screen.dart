@@ -26,6 +26,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   String _email = 'Loading...';
   String _role = 'LGU';
   String? _assignedGateId;
+  StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   // Flood monitoring
   DatabaseReference? _floodRef;
@@ -33,10 +34,6 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   double waterLevelM = 0.0;
   bool isGateOpen = true;
   String lastUpdated = '';
-
-  // Water level threshold prompt flags
-  bool _hasShownWarningPrompt = false;
-  bool _hasShownCriticalPrompt = false;
 
   // Weather
   final WeatherService _weatherService = WeatherService();
@@ -72,6 +69,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
 
   @override
   void dispose() {
+    _userSubscription?.cancel();
     _floodSubscription?.cancel();
     _announcementTitleController.dispose();
     _announcementDescController.dispose();
@@ -87,23 +85,37 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
         _email = user.email ?? 'No Email';
         _username = user.displayName ?? 'LGU User';
       });
-      try {
-        final snapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        if (snapshot.exists && mounted) {
-          final data = snapshot.data();
-          if (data != null) {
+
+      // LISTEN to real-time changes in the LGU's Firestore document
+      _userSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((snapshot) {
+        if (!snapshot.exists || !mounted) return;
+
+        final data = snapshot.data();
+        if (data != null) {
+          final String? newGateId = data['assigned_gate_id'];
+
+          setState(() {
+            _username = data['username'] ?? _username;
+            _role = data['role'] ?? _role;
+          });
+
+          // REACTION LOGIC: If the assigned gate ID changes
+          if (newGateId != _assignedGateId) {
+            // Cancel existing RTDB listener before switching
+            _floodSubscription?.cancel();
+            
             setState(() {
-              _username = data['username'] ?? _username;
-              _role = data['role'] ?? _role;
-              _assignedGateId = data['assigned_gate_id'];
+              _assignedGateId = newGateId;
             });
 
-            if (_assignedGateId != null) {
-              _floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$_assignedGateId');
+            if (newGateId != null) {
+              _floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$newGateId');
               
-              // Cancel any existing subscription before creating a new one
-              await _floodSubscription?.cancel();
-              
+              // Start listening to the NEWly assigned gate
               _floodSubscription = _floodRef!.onValue.listen((event) {
                 if (event.snapshot.exists && mounted) {
                   final floodData = event.snapshot.value as Map<dynamic, dynamic>;
@@ -112,40 +124,22 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
                     waterLevelM = (floodData['water_level_m'] ?? 0.0).toDouble();
                     lastUpdated = floodData['last_updated']?.toString() ?? 'Just now';
                   });
-
-                  // --- THRESHOLD ALERT LOGIC ---
-                  if (mounted && isGateOpen) {
-                    if (waterLevelM >= 18.0 && !_hasShownCriticalPrompt) {
-                      _hasShownCriticalPrompt = true;
-                      _showLevelThresholdDialog(
-                        isCritical: true,
-                        message: 'Water level has reached CRITICAL (${waterLevelM.toStringAsFixed(1)}m). It is highly recommended to CLOSE the gate immediately.',
-                      );
-                    } else if (waterLevelM >= 16.0 && waterLevelM < 18.0 && !_hasShownWarningPrompt) {
-                      _hasShownWarningPrompt = true;
-                      _showLevelThresholdDialog(
-                        isCritical: false,
-                        message: 'Water level has reached CAUTION (${waterLevelM.toStringAsFixed(1)}m). Consider closing the gate.',
-                      );
-                    }
-                  }
-
-                  // Reset flags if level drops back down
-                  if (waterLevelM < 16.0) {
-                    _hasShownWarningPrompt = false;
-                    _hasShownCriticalPrompt = false;
-                  } else if (waterLevelM >= 16.0 && waterLevelM < 18.0) {
-                    _hasShownCriticalPrompt = false;
-                  }
-                  // -------------------------
                 }
+              });
+            } else {
+              // No gate assigned
+              _floodRef = null;
+              setState(() {
+                isGateOpen = true;
+                waterLevelM = 0.0;
+                lastUpdated = 'None';
               });
             }
           }
         }
-      } catch (e) {
-        debugPrint("Error fetching user data: $e");
-      }
+      }, onError: (e) {
+        debugPrint("Error listening to LGU data: $e");
+      });
     }
   }
 
@@ -299,13 +293,32 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
                 const SizedBox(height: 4),
                 if (desc.isNotEmpty) Text(desc, style: const TextStyle(fontSize: 13, color: textSecondary, height: 1.4)),
                 const SizedBox(height: 6),
-                Text('${dt.hour}:${dt.minute.toString().padLeft(2, '0')} • ${dt.month}/${dt.day}', style: const TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_rounded, size: 10, color: textSecondary.withOpacity(0.6)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour)}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'} • ${_getMonthName(dt.month)} ${dt.day}',
+                      style: TextStyle(
+                        fontSize: 10, 
+                        color: textSecondary.withOpacity(0.8), 
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',];
+    return months[month - 1];
   }
 
   // ── TAB 3: MESSAGING (Announcements) ─────────────────────────────────────
@@ -826,89 +839,6 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   // ──────────────────────────────────────────────────────────────────────────
   // WATER LEVEL THRESHOLD MODAL
   // ──────────────────────────────────────────────────────────────────────────
-
-  void _showLevelThresholdDialog({required bool isCritical, required String message}) {
-    if (!mounted) return;
-
-    final parentContext = context;
-    Future.microtask(() {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: isCritical ? dangerRed : warningOrange,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isCritical ? 'CRITICAL LEVEL' : 'CAUTION LEVEL',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: isCritical ? dangerRed : textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              message,
-              style: const TextStyle(fontSize: 16, color: textSecondary, height: 1.4),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Dismiss', style: TextStyle(color: textSecondary, fontWeight: FontWeight.bold)),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.of(dialogContext).pop();
-                  try {
-                    if (_floodRef != null) {
-                      await _floodRef!.update({'floodgate_status': 'closed'});
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text('Floodgate closed successfully.'),
-                            backgroundColor: successGreen,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    debugPrint('Firebase Update Error: $e');
-                    if (mounted) {
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to update: $e'),
-                          backgroundColor: dangerRed,
-                        ),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isCritical ? dangerRed : warningOrange,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                child: const Text('Close Gate', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        },
-      );
-    });
-  }
 
   Widget _buildEmptyState(String msg, IconData icon) {
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, size: 48, color: Colors.grey[200]), const SizedBox(height: 16), Text(msg, style: const TextStyle(color: textSecondary, fontWeight: FontWeight.bold))]));

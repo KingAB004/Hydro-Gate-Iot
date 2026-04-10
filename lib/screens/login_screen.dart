@@ -42,7 +42,23 @@ class _LoginScreenState extends State<LoginScreen> {
               .doc(credential.user!.uid)
               .get();
           if (snapshot.exists && snapshot.data() != null) {
-            role = snapshot.data()!['role']?.toString() ?? 'Homeowner';
+            final data = snapshot.data()!;
+            role = data['role']?.toString() ?? 'Homeowner';
+            final status = data['status']?.toString().toLowerCase() ?? 'active';
+
+            if (status != 'active') {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Access Denied: Your account is currently inactive.'),
+                    backgroundColor: Color(0xFFEF4444),
+                  ),
+                );
+              }
+              setState(() => _isLoading = false);
+              return;
+            }
           }
         } catch (e) {
           debugPrint('Error fetching role: $e');
@@ -123,7 +139,23 @@ class _LoginScreenState extends State<LoginScreen> {
               .doc(userCredential.user!.uid)
               .get();
           if (snapshot.exists && snapshot.data() != null) {
-            role = snapshot.data()!['role']?.toString() ?? 'Homeowner';
+            final data = snapshot.data()!;
+            role = data['role']?.toString() ?? 'Homeowner';
+            final status = data['status']?.toString().toLowerCase() ?? 'active';
+
+            if (status != 'active') {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Access Denied: Your account is currently inactive.'),
+                    backgroundColor: Color(0xFFEF4444),
+                  ),
+                );
+              }
+              setState(() => _isLoading = false);
+              return;
+            }
           }
         } catch (e) {
           debugPrint('Error fetching role: $e');

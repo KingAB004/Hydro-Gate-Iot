@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -31,6 +32,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   
   // Realtime Database reference (null until device is loaded)
   DatabaseReference? _floodRef;
+  StreamSubscription<DatabaseEvent>? _floodSubscription;
+  StreamSubscription<DocumentSnapshot>? _userSubscription;
   String? assignedGateId;
   bool _isLoadingDevice = true;
 
@@ -98,6 +101,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   @override
   void dispose() {
     _pulseController.dispose();
+    _userSubscription?.cancel();
+    _floodSubscription?.cancel();
     super.dispose();
   }
 
@@ -110,36 +115,52 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           _username = user.displayName ?? 'User';
         });
       }
-      try {
-        final snapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        if (snapshot.exists) {
-          final data = snapshot.data();
-          if (data != null && mounted) {
+
+      // LISTEN to real-time changes in the user's Firestore document
+      _userSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((snapshot) {
+        if (!snapshot.exists || !mounted) return;
+
+        final data = snapshot.data();
+        if (data != null) {
+          final String? newGateId = data['assigned_gate_id'];
+
+          setState(() {
+            _username = data['username'] ?? _username;
+            _role = data['role'] ?? _role;
+          });
+
+          // DEVICE ASSIGNMENT REACTION LOGIC
+          if (newGateId != assignedGateId) {
+            // Cancel existing RTDB listener before switching
+            _floodSubscription?.cancel();
+            
             setState(() {
-              _username = data['username'] ?? _username;
-              _role = data['role'] ?? _role;
-              // FETCH ASSIGNED GATE ID
-              assignedGateId = data['assigned_gate_id'];
+              assignedGateId = newGateId;
+              _isLoadingDevice = (newGateId != null);
             });
 
-            if (assignedGateId != null) {
-              // Initialize Ref to the specific gate
-              _floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$assignedGateId');
+            if (newGateId != null) {
+              _floodRef = FirebaseDatabase.instance.ref('flood_monitoring/$newGateId');
               
-              // Listen to flood monitoring data for THIS gate
-              _floodRef!.onValue.listen((event) {
-                if (event.snapshot.exists && mounted) {
-                  final data = event.snapshot.value as Map<dynamic, dynamic>;
+              // Start listening to the NEWly assigned gate
+              _floodSubscription = _floodRef!.onValue.listen((event) {
+                if (!mounted) return;
+                
+                if (event.snapshot.exists) {
+                  final floodData = event.snapshot.value as Map<dynamic, dynamic>;
                   setState(() {
-                    isGateOpen = data['floodgate_status'] != 'closed';
-                    // Read the meter value directly
-                    waterLevelM = (data['water_level_m'] ?? 0).toDouble();
-                    lastUpdated = data['last_updated']?.toString() ?? '';
+                    isGateOpen = floodData['floodgate_status'] != 'closed';
+                    waterLevelM = (floodData['water_level_m'] ?? 0).toDouble();
+                    lastUpdated = floodData['last_updated']?.toString() ?? '';
                     _isLoadingDevice = false;
                   });
 
                   // --- THRESHOLD LOGIC ---
-                  if (mounted && isGateOpen) {
+                  if (isGateOpen) {
                     if (waterLevelM >= 18.0 && !_hasShownCriticalPrompt) {
                       _hasShownCriticalPrompt = true;
                       _showLevelThresholdDialog(
@@ -162,23 +183,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   } else if (waterLevelM >= 16.0 && waterLevelM < 18.0) {
                     _hasShownCriticalPrompt = false;
                   }
-                  // -------------------------
-
-                } else if (mounted) {
-                   setState(() => _isLoadingDevice = false);
+                } else {
+                  setState(() => _isLoadingDevice = false);
                 }
               });
             } else {
-              if (mounted) setState(() => _isLoadingDevice = false);
+              // No device assigned
+              _floodRef = null;
+              setState(() => _isLoadingDevice = false);
             }
           }
-        } else {
-          if (mounted) setState(() => _isLoadingDevice = false);
         }
-      } catch (e) {
-        debugPrint("Error fetching user data: $e");
+      }, onError: (e) {
+        debugPrint("Error listening to user data: $e");
         if (mounted) setState(() => _isLoadingDevice = false);
-      }
+      });
     }
   }
 

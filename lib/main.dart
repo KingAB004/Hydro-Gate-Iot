@@ -6,8 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_home_screen.dart';
 import 'screens/lgu_home_screen.dart';
-import 'screens/splash_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'screens/inactive_account_screen.dart';
+import 'dart:async';
 
 import 'package:afwms_flutter/widgets/startup_widgets.dart';
 import 'widgets/session_timeout_manager.dart';
@@ -104,7 +105,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       builder: (context, child) => SessionTimeoutManager(child: child!),
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
@@ -124,28 +125,37 @@ class AuthWrapper extends StatelessWidget {
         }
         if (snapshot.hasData && snapshot.data != null) {
           final user = snapshot.data!;
-          return FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
+          return StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
-                .get(),
-            builder: (context, roleSnapshot) {
-              if (roleSnapshot.connectionState == ConnectionState.waiting) {
+                .snapshots(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
               
-              String role = 'Homeowner';
-              if (roleSnapshot.hasData && roleSnapshot.data != null && roleSnapshot.data!.exists) {
-                final data = roleSnapshot.data!.data() as Map<String, dynamic>?;
-                role = data?['role']?.toString() ?? 'Homeowner';
+              if (userSnapshot.hasData && userSnapshot.data != null && userSnapshot.data!.exists) {
+                final data = userSnapshot.data!.data() as Map<String, dynamic>?;
+                final String status = data?['status']?.toString().toLowerCase() ?? 'active';
+                final String role = data?['role']?.toString() ?? 'Homeowner';
+                
+                // SECURITY CHECK: If account is not active, block access
+                if (status != 'active') {
+                  return const InactiveAccountScreen();
+                }
+
+                final roleTag = role.trim().toUpperCase();
+                if (roleTag == 'LGU' || roleTag == 'ADMIN') {
+                  return const LGUDashboardScreen();
+                }
+                return const MainHomeScreen();
               }
               
-              final roleTag = role.trim().toUpperCase();
-              if (roleTag == 'LGU' || roleTag == 'ADMIN') {
-                return const LGUDashboardScreen();
-              }
+              // If user document doesn't exist yet, default to Homeowner dashboard or 
+              // handle accordingly. For security, we could return a loading or error.
               return const MainHomeScreen();
             },
           );
