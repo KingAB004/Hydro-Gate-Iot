@@ -553,7 +553,7 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           children: [
             Text(title.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: textSecondary)),
             const SizedBox(height: 4),
-            const Text('HydroGate Admin', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
+            const Text('HydroGate LGU', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textPrimary, letterSpacing: -0.5)),
           ],
         ),
       ],
