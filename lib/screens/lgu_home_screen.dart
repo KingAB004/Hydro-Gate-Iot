@@ -34,6 +34,10 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   bool isGateOpen = true;
   String lastUpdated = '';
 
+  // Water level threshold prompt flags
+  bool _hasShownWarningPrompt = false;
+  bool _hasShownCriticalPrompt = false;
+
   // Weather
   final WeatherService _weatherService = WeatherService();
   WeatherForecast? _weatherForecast;
@@ -108,6 +112,32 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
                     waterLevelM = (floodData['water_level_m'] ?? 0.0).toDouble();
                     lastUpdated = floodData['last_updated']?.toString() ?? 'Just now';
                   });
+
+                  // --- THRESHOLD ALERT LOGIC ---
+                  if (mounted && isGateOpen) {
+                    if (waterLevelM >= 18.0 && !_hasShownCriticalPrompt) {
+                      _hasShownCriticalPrompt = true;
+                      _showLevelThresholdDialog(
+                        isCritical: true,
+                        message: 'Water level has reached CRITICAL (${waterLevelM.toStringAsFixed(1)}m). It is highly recommended to CLOSE the gate immediately.',
+                      );
+                    } else if (waterLevelM >= 16.0 && waterLevelM < 18.0 && !_hasShownWarningPrompt) {
+                      _hasShownWarningPrompt = true;
+                      _showLevelThresholdDialog(
+                        isCritical: false,
+                        message: 'Water level has reached CAUTION (${waterLevelM.toStringAsFixed(1)}m). Consider closing the gate.',
+                      );
+                    }
+                  }
+
+                  // Reset flags if level drops back down
+                  if (waterLevelM < 16.0) {
+                    _hasShownWarningPrompt = false;
+                    _hasShownCriticalPrompt = false;
+                  } else if (waterLevelM >= 16.0 && waterLevelM < 18.0) {
+                    _hasShownCriticalPrompt = false;
+                  }
+                  // -------------------------
                 }
               });
             }
@@ -784,6 +814,93 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
         child: Text('No recent gate activity', style: TextStyle(color: textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
       ),
     );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // WATER LEVEL THRESHOLD MODAL
+  // ──────────────────────────────────────────────────────────────────────────
+
+  void _showLevelThresholdDialog({required bool isCritical, required String message}) {
+    if (!mounted) return;
+
+    final parentContext = context;
+    Future.microtask(() {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: isCritical ? dangerRed : warningOrange,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isCritical ? 'CRITICAL LEVEL' : 'CAUTION LEVEL',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: isCritical ? dangerRed : textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              message,
+              style: const TextStyle(fontSize: 16, color: textSecondary, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Dismiss', style: TextStyle(color: textSecondary, fontWeight: FontWeight.bold)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  try {
+                    if (_floodRef != null) {
+                      await _floodRef!.update({'floodgate_status': 'closed'});
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text('Floodgate closed successfully.'),
+                            backgroundColor: successGreen,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint('Firebase Update Error: $e');
+                    if (mounted) {
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to update: $e'),
+                          backgroundColor: dangerRed,
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isCritical ? dangerRed : warningOrange,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: const Text('Close Gate', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   Widget _buildEmptyState(String msg, IconData icon) {
