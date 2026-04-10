@@ -6,6 +6,9 @@
     const messageEl = document.getElementById('login-message');
     const submitBtn = document.getElementById('admin-login-submit');
 
+    // Flag to prevent onAuthStateChanged from interfering during form login
+    let _isSubmitting = false;
+
     const setMessage = function (type, text) {
         if (!messageEl) return;
         messageEl.className = 'auth-message' + (type ? (' ' + type) : '');
@@ -107,9 +110,12 @@
         }
 
         // Auto-redirect if already signed-in and admin
+        // Skip if the form is currently being submitted (to avoid race conditions)
         window.auth.onAuthStateChanged(async function (user) {
+            if (_isSubmitting) return; // Don't interfere during form login
             if (!user) return;
             const ok = await ensureAdminRole(user);
+            if (_isSubmitting) return; // Re-check after async operation
             if (ok === true) {
                 redirectToDashboard();
                 return;
@@ -119,7 +125,7 @@
                 setMessage('error', 'Unable to verify Admin role. Check Firestore access/rules for /users.');
             }
 
-            // Not admin => sign out
+            // Not admin => sign out silently
             try {
                 await window.auth.signOut();
             } catch (_) {}
@@ -139,6 +145,7 @@
 
                 setLoading(true);
                 setMessage('', '');
+                _isSubmitting = true; // Block onAuthStateChanged from interfering
 
                 try {
                     await window.auth.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
@@ -147,22 +154,48 @@
                     const user = credential && credential.user;
 
                     const ok = await ensureAdminRole(user);
+                    
+                    if (user) {
+                        try {
+                            const doc = await window.firestoreDb.collection('users').doc(user.uid).get();
+                            if (doc.exists) {
+                                const data = doc.data();
+                                console.log('[Auth Debug] Firestore Document for UID', user.uid, ':', data);
+                                console.log('[Auth Debug] Evaluated Role:', data.role, '(Type:', typeof data.role, ')');
+                            } else {
+                                console.warn('[Auth Debug] No Firestore document found for UID:', user.uid);
+                            }
+                        } catch (e) {
+                            console.error('[Auth Debug] Firestore fetch failed:', e);
+                        }
+                    }
+
                     if (ok === null) {
                         try {
                             await window.auth.signOut();
                         } catch (_) {}
-                        setMessage('error', 'Unable to verify Admin role. Check Firestore access/rules for /users.');
+                        setMessage('error', 'Critical: Unable to connect to user database. Please check console logs.');
                         return;
                     }
 
                     if (ok === false) {
                         try {
+                            const doc = await window.firestoreDb.collection('users').doc(user.uid).get();
+                            const rawData = doc.data() || {};
+                            const currentRole = rawData.role || 'Not Set';
+                            
+                            console.error('Access Denied. Role found:', currentRole, 'UID:', user.uid);
+                            
                             await window.auth.signOut();
-                        } catch (_) {}
-                        setMessage('error', 'Access denied. This account is not an Admin.');
+                            setMessage('error', `Access Denied: Your account role is "${currentRole}". This panel requires "Admin" role.`);
+                        } catch (_) {
+                            await window.auth.signOut();
+                            setMessage('error', 'Access Denied: You do not have administrator permissions.');
+                        }
                         return;
                     }
 
+                    console.log('Access Authorized. Redirecting...');
                     redirectToDashboard();
                 } catch (err) {
                     const code = err && err.code ? String(err.code) : '';
@@ -174,6 +207,7 @@
 
                     setMessage('error', message);
                 } finally {
+                    _isSubmitting = false; // Re-enable onAuthStateChanged
                     setLoading(false);
                 }
             });
