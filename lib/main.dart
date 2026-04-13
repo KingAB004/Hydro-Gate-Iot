@@ -3,15 +3,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/main_home_screen.dart';
-import 'screens/lgu_home_screen.dart';
+import 'package:afwms_flutter/screens/welcome_screen.dart';
+import 'package:afwms_flutter/screens/main_home_screen.dart';
+import 'package:afwms_flutter/screens/lgu_home_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'screens/inactive_account_screen.dart';
+import 'package:afwms_flutter/screens/inactive_account_screen.dart';
+import 'package:afwms_flutter/screens/splash_screen.dart';
 import 'dart:async';
 
 import 'package:afwms_flutter/widgets/startup_widgets.dart';
-import 'widgets/session_timeout_manager.dart';
+import 'package:afwms_flutter/widgets/session_timeout_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,59 +111,104 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasData && snapshot.data != null) {
-          final user = snapshot.data!;
-          return StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .snapshots(),
-            builder: (context, userSnapshot) {
-              if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              
-              if (userSnapshot.hasData && userSnapshot.data != null && userSnapshot.data!.exists) {
-                final data = userSnapshot.data!.data() as Map<String, dynamic>?;
-                final String status = data?['status']?.toString().toLowerCase() ?? 'active';
-                final String role = data?['role']?.toString() ?? 'Homeowner';
-                
-                // SECURITY CHECK: If account is not active, block access
-                if (status != 'active') {
-                  return const InactiveAccountScreen();
-                }
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
 
-                final roleTag = role.trim().toUpperCase();
-                if (roleTag == 'LGU' || roleTag == 'ADMIN') {
-                  return const LGUDashboardScreen();
-                }
-                return const MainHomeScreen();
-              }
-              
-              // If user document doesn't exist yet, default to Homeowner dashboard or 
-              // handle accordingly. For security, we could return a loading or error.
-              return const MainHomeScreen();
-            },
-          );
-        }
-        return const WelcomeScreen();
-      },
-    );
+class _AuthWrapperState extends State<AuthWrapper> {
+  User? _authUser;
+  String? _role;
+  String? _status;
+  bool _isLoading = true;
+  StreamSubscription<User?>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToAuth();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _subscribeToAuth() {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (!mounted) return;
+      
+      setState(() {
+        _authUser = user;
+        _isLoading = true;
+      });
+
+      if (user != null) {
+        _performHandshake(user);
+      } else {
+        setState(() {
+          _role = null;
+          _status = null;
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _performHandshake(User user) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!mounted) return;
+
+      if (doc.exists) {
+        final data = doc.data();
+        setState(() {
+          _role = data?['role']?.toString() ?? 'Homeowner';
+          _status = data?['status']?.toString().toLowerCase() ?? 'active';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _role = 'Homeowner';
+          _status = 'active';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error in Auth Handshake: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SplashScreen();
+    }
+
+    if (_authUser == null) {
+      return const WelcomeScreen();
+    }
+
+    if (_status != 'active') {
+      return const InactiveAccountScreen();
+    }
+
+    final roleTag = (_role ?? 'Homeowner').trim().toUpperCase();
+    if (roleTag == 'LGU' || roleTag == 'ADMIN') {
+      return const LGUDashboardScreen();
+    }
+
+    return const MainHomeScreen();
   }
 }
 

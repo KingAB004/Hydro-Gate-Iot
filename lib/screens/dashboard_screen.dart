@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/alerts_dropdown.dart';
 import '../utils/notifications.dart';
 import '../services/weather_service.dart';
@@ -60,8 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   WeatherForecast? _weatherForecast;
   bool _isLoadingWeather = true;
 
-  bool _hasShownWarningPrompt = false;
-  bool _hasShownCriticalPrompt = false;
+  int _currentAlarmLevel = 0; // 0: Normal, 1: Watch, 2: Warning, 3: Danger, 4: Emergency
 
   @override
   void initState() {
@@ -159,29 +159,26 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     _isLoadingDevice = false;
                   });
 
-                  // --- THRESHOLD LOGIC ---
-                  if (isGateOpen) {
-                    if (waterLevelM >= 18.0 && !_hasShownCriticalPrompt) {
-                      _hasShownCriticalPrompt = true;
-                      _showLevelThresholdDialog(
-                        isCritical: true, 
-                        message: 'Water level has reached CRITICAL (${waterLevelM.toStringAsFixed(1)}m). It is highly recommended to CLOSE the gate immediately.'
-                      );
-                    } else if (waterLevelM >= 16.0 && waterLevelM < 18.0 && !_hasShownWarningPrompt) {
-                      _hasShownWarningPrompt = true;
-                      _showLevelThresholdDialog(
-                        isCritical: false, 
-                        message: 'Water level has reached CAUTION (${waterLevelM.toStringAsFixed(1)}m). Consider closing the gate.'
-                      );
-                    }
+                  // --- MARIKINA THRESHOLD LOGIC ---
+                  int newAlarmLevel = 0;
+                  if (waterLevelM >= 18.0) {
+                    newAlarmLevel = 4;
+                  } else if (waterLevelM >= 17.0) {
+                    newAlarmLevel = 3;
+                  } else if (waterLevelM >= 16.0) {
+                    newAlarmLevel = 2;
+                  } else if (waterLevelM >= 15.0) {
+                    newAlarmLevel = 1;
                   }
 
-                  // Reset flags if level drops back down
-                  if (waterLevelM < 16.0) {
-                    _hasShownWarningPrompt = false;
-                    _hasShownCriticalPrompt = false;
-                  } else if (waterLevelM >= 16.0 && waterLevelM < 18.0) {
-                    _hasShownCriticalPrompt = false;
+                  if (newAlarmLevel > _currentAlarmLevel) {
+                    _currentAlarmLevel = newAlarmLevel;
+                    // Skip showing level 1 if gate is already closed (no point recommending gate closure only)
+                    if (!(newAlarmLevel == 1 && !isGateOpen)) {
+                      _showLevelThresholdDialog(newAlarmLevel, waterLevelM);
+                    }
+                  } else if (newAlarmLevel < _currentAlarmLevel) {
+                    _currentAlarmLevel = newAlarmLevel; // Reset state when level recedes
                   }
                 } else {
                   setState(() => _isLoadingDevice = false);
@@ -602,103 +599,165 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  void _showLevelThresholdDialog({required bool isCritical, required String message}) {
+  void _showLevelThresholdDialog(int level, double levelMeters) {
     if (!mounted) return;
     
     final parentContext = context;
+    
+    String title = '';
+    String message = '';
+    Color themeColor = warningOrange; // default
+    IconData iconData = Icons.warning_amber_rounded;
+    String actionText = 'Close Gate';
+    
+    if (level == 1) {
+      title = 'LEVEL 1: WATCH';
+      message = 'Water level shifted to ${levelMeters.toStringAsFixed(1)} m. The system recommends closing the floodgate for protection.';
+      themeColor = const Color(0xFFEAB308); // Amber
+      actionText = 'Close Floodgate';
+    } else if (level == 2) {
+      title = 'LEVEL 2: WARNING';
+      message = 'Water level reached ${levelMeters.toStringAsFixed(1)} m. Prepare to evacuate or stay indoors and wait for the flood to settle.';
+      themeColor = warningOrange;
+      actionText = 'Prepare & Close Gate';
+    } else if (level == 3) {
+      title = 'LEVEL 3: DANGER';
+      message = 'Water level is at ${levelMeters.toStringAsFixed(1)} m. It is highly recommended to evacuate to your designated evacuation centers now.';
+      themeColor = dangerRed;
+      actionText = 'Evacuate & Close Gate';
+    } else if (level == 4) {
+      title = 'LEVEL 4: EMERGENCY';
+      message = 'Water level has reached ${levelMeters.toStringAsFixed(1)} m. FORCE EVACUATION is now in effect. Please proceed to the nearest safe zone immediately.';
+      themeColor = const Color(0xFF7F1D1D); // Dark Red
+      actionText = 'Close Gate & Contacts';
+    }
+
     Future.microtask(() {
       if (!mounted) return;
       showDialog(
         context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded, 
-                color: isCritical ? dangerRed : warningOrange, 
-                size: 28
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  isCritical ? 'CRITICAL LEVEL' : 'CAUTION LEVEL',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isCritical ? dangerRed : textPrimary),
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Icon(iconData, color: themeColor, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: themeColor),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          content: Text(
-            message,
-            style: const TextStyle(fontSize: 16, color: textSecondary, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Dismiss', style: TextStyle(color: textSecondary, fontWeight: FontWeight.bold)),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final newStatus = 'closed';
-                Navigator.of(dialogContext).pop();
-                try {
-                  if (_floodRef != null) {
-                    await _floodRef!.update({'floodgate_status': newStatus});
-                    
-                    await AuditLogService().logEvent(
-                      action: 'floodgate_update',
-                      severity: 'warning',
-                      description: 'Floodgate closed from threshold prompt on device $assignedGateId',
-                      role: _role,
-                    );
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 16, color: textSecondary, height: 1.4),
+                ),
+                if (level == 4) ...[
+                  const SizedBox(height: 16),
+                  const Text('EMERGENCY CONTACTS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary)),
+                  const SizedBox(height: 8),
+                  _buildEmergencyContactRow('Marikina Rescue', '161'),
+                  _buildEmergencyContactRow('Marikina Police', '941-4033'),
+                  _buildEmergencyContactRow('Marikina Fire Dept', '941-4532'),
+                  _buildEmergencyContactRow('NDRRMC', '911-5061'),
+                  _buildEmergencyContactRow('Red Cross Marikina', '942-3974'),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Dismiss', style: TextStyle(color: textSecondary, fontWeight: FontWeight.bold)),
+              ),
+              if (isGateOpen)
+                ElevatedButton(
+                  onPressed: () async {
+                    final newStatus = 'closed';
+                    Navigator.of(dialogContext).pop();
+                    try {
+                      if (_floodRef != null) {
+                        await _floodRef!.update({'floodgate_status': newStatus});
+                        
+                        await AuditLogService().logEvent(
+                          action: 'floodgate_update',
+                          severity: level >= 3 ? 'danger' : 'warning',
+                          description: 'Floodgate closed from Level $level prompt on device $assignedGateId',
+                          role: _role,
+                        );
 
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user != null) {
-                      await FirebaseFirestore.instance.collection('announcements').add({
-                        'userId': user.uid,
-                        'message': '$_username closed the floodgate ($assignedGateId) due to high water levels.',
-                        'title': 'Emergency Floodgate Action',
-                        'type': 'emergency',
-                        'timestamp': FieldValue.serverTimestamp(),
-                        'sender': 'System',
-                        'gateId': assignedGateId,
-                      });
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user != null) {
+                          await FirebaseFirestore.instance.collection('announcements').add({
+                            'userId': user.uid,
+                            'message': '$_username closed the floodgate ($assignedGateId) at Level $level.',
+                            'title': 'Emergency Floodgate Action',
+                            'type': level >= 3 ? 'emergency' : 'warning',
+                            'timestamp': FieldValue.serverTimestamp(),
+                            'sender': 'System',
+                            'gateId': assignedGateId,
+                          });
+                        }
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text('Floodgate closed successfully.'),
+                            backgroundColor: successGreen,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint("Firebase Update Error: $e");
                     }
-                  }
-                  if (mounted) {
-                    ScaffoldMessenger.of(parentContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('Floodgate closed successfully.'),
-                        backgroundColor: successGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  debugPrint("Firebase Update Error: $e");
-                  if (mounted) {
-                    ScaffoldMessenger.of(parentContext).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update: $e'),
-                        backgroundColor: dangerRed,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isCritical ? dangerRed : warningOrange,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: const Text('Close Gate', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  child: Text(actionText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+            ],
+          );
+        },
+      );
     });
+  }
+
+  Widget _buildEmergencyContactRow(String name, String number) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(name, style: const TextStyle(fontSize: 14, color: textSecondary)),
+          GestureDetector(
+            onTap: () async {
+               final String rawNumber = number.replaceAll(RegExp(r'[^0-9]'), '');
+               final Uri url = Uri(scheme: 'tel', path: rawNumber);
+               if (await canLaunchUrl(url)) {
+                 await launchUrl(url);
+               } else {
+                 debugPrint('Could not launch \$number');
+               }
+            },
+            child: Text(
+              number, 
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF7F1D1D), decoration: TextDecoration.underline),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildWaterLevelMonitorCard() {

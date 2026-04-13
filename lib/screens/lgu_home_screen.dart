@@ -46,6 +46,33 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
   final TextEditingController _announcementDescController = TextEditingController();
   String _selectedPriority = 'info';
 
+  final List<Map<String, String>> _quickTemplates = [
+    {
+      'level': '15m',
+      'title': 'Marikina River Level 1: WATCH',
+      'message': 'Water level has reached 15m. Monitoring is in effect. Residents are advised to stay alert and prepare for possible updates. Consider closing local floodgates.',
+      'priority': 'info',
+    },
+    {
+      'level': '16m',
+      'title': 'Marikina River Level 2: WARNING',
+      'message': 'Water level has reached 16m. Residents should prepare for evacuation. Ready your emergency kits and keep monitoring official flood alerts.',
+      'priority': 'warning',
+    },
+    {
+      'level': '17m',
+      'title': 'Marikina River Level 3: DANGER',
+      'message': 'Water level is at 17m. Voluntary evacuation is activated. Please proceed to designated evacuation centers. Avoid low-lying areas.',
+      'priority': 'danger',
+    },
+    {
+      'level': '18m',
+      'title': 'Marikina River Level 4: EMERGENCY',
+      'message': 'Water level reached 18m. FORCE EVACUATION is now in effect for all affected areas. Move to safety immediately! Contact Marikina Rescue at 161.',
+      'priority': 'danger',
+    },
+  ];
+
   // Navigation
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
@@ -331,6 +358,10 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
         children: [
           _buildHeader('Broadcast'),
           const SizedBox(height: 24),
+          const Text('QUICK TEMPLATES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
+          const SizedBox(height: 16),
+          _buildQuickTemplates(),
+          const SizedBox(height: 24),
           const Text('NEW ANNOUNCEMENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: textSecondary)),
           const SizedBox(height: 16),
           Container(
@@ -373,6 +404,62 @@ class _LGUDashboardScreenState extends State<LGUDashboardScreen> with SingleTick
           ),
 
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickTemplates() {
+    return SizedBox(
+      height: 90,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _quickTemplates.length,
+        itemBuilder: (context, index) {
+          final t = _quickTemplates[index];
+          final color = t['priority'] == 'danger' ? dangerRed : (t['priority'] == 'warning' ? warningOrange : brandTeal);
+          
+          return GestureDetector(
+            onTap: () => _applyTemplate(t),
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(t['level']!, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+                  const SizedBox(height: 2),
+                  Text(
+                    t['priority']!.toUpperCase(),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _applyTemplate(Map<String, String> template) {
+    setState(() {
+      _announcementTitleController.text = template['title']!;
+      _announcementDescController.text = template['message']!;
+      _selectedPriority = template['priority']!;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Applied ${template['level']} template. Review before sending.'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: brandTeal,
       ),
     );
   }

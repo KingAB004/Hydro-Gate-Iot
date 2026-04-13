@@ -147,7 +147,6 @@ class AnnouncementListenerService {
             }
 
             // Get announcement data
-            final data = doc.data() as Map<String, dynamic>;
             final String type = data['type'] ?? 'info';
             final String message = data['message'] ?? '';
             final String sender = data['sender'] ?? 'LGU';

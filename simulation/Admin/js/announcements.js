@@ -205,6 +205,7 @@ async function deleteAllAnnouncementsInternal() {
     let deleted = 0;
     try {
         // Batch delete in chunks (Firestore batch limit is 500 ops)
+        // 1. Delete Announcements
         while (true) {
             const snapshot = await firestoreDb.collection('announcements').limit(400).get();
             if (snapshot.empty) break;
@@ -217,11 +218,25 @@ async function deleteAllAnnouncementsInternal() {
             deleted += snapshot.size;
         }
 
+        // 2. Delete Simulation Alerts (Water warnings)
+        let alertCount = 0;
+        while (true) {
+            const snapshot = await firestoreDb.collection('alerts').limit(400).get();
+            if (snapshot.empty) break;
+
+            const batch = firestoreDb.batch();
+            snapshot.forEach(function(doc) {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            alertCount += snapshot.size;
+        }
+
         if (typeof window.writeAuditLog === 'function') {
             await window.writeAuditLog(
                 'admin_announcement_delete_all',
                 'danger',
-                'Deleted all announcements (' + deleted + ')'
+                'Deleted ' + deleted + ' announcements and ' + alertCount + ' alerts'
             );
         }
 

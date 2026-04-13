@@ -55,28 +55,43 @@ function loadDeviceSelector() {
 
     // Load from Firestore devices collection
     window.firestoreDb.collection('devices').onSnapshot((snapshot) => {
-        selector.innerHTML = '';
-        const devices = [];
-
+        let devices = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
             devices.push({ id: doc.id, name: data.name || doc.id, location: data.location || '' });
         });
 
-        // Also check flood_monitoring for devices not in Firestore
+        const mergeAndPopulate = (rtdbKeys) => {
+            rtdbKeys.forEach(deviceId => {
+                if (!devices.find(d => d.id === deviceId)) {
+                    devices.push({ id: deviceId, name: formatDeviceName(deviceId), location: '' });
+                }
+            });
+            console.log('Statistics: Loaded', devices.length, 'devices');
+            populateSelector(selector, devices);
+        };
+
+        // Always check RTDB for devices, even if Firestore has some, to ensure consistency
         if (window.db) {
             window.db.ref('flood_monitoring').once('value', (rtdbSnapshot) => {
                 const rtdbData = rtdbSnapshot.val() || {};
-                Object.keys(rtdbData).forEach(deviceId => {
-                    if (!devices.find(d => d.id === deviceId)) {
-                        devices.push({ id: deviceId, name: formatDeviceName(deviceId), location: '' });
-                    }
-                });
-
+                mergeAndPopulate(Object.keys(rtdbData));
+            }, (err) => {
+                console.warn('RTDB Device Fetch failed:', err);
                 populateSelector(selector, devices);
             });
         } else {
             populateSelector(selector, devices);
+        }
+    }, (err) => {
+        console.error('Firestore Device Listener failed:', err);
+        // Fallback to RTDB only if Firestore fails/denied
+        if (window.db) {
+            window.db.ref('flood_monitoring').once('value', (s) => {
+                const data = s.val() || {};
+                const keys = Object.keys(data).map(id => ({ id, name: formatDeviceName(id), location: '' }));
+                populateSelector(selector, keys);
+            });
         }
     });
 

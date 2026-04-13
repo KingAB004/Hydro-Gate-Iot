@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'welcome_screen.dart';
+import 'package:afwms_flutter/services/auth_service.dart';
+import 'package:afwms_flutter/screens/welcome_screen.dart';
 
 class InactiveAccountScreen extends StatelessWidget {
   const InactiveAccountScreen({super.key});
